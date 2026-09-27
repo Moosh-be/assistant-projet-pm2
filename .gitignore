@@ -1,0 +1,12 @@
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Obsidian (si le kit est utilisé tel quel dans un vault)
+.obsidian/workspace*
+.trash/
+
+# Python
+__pycache__/
+*.pyc
