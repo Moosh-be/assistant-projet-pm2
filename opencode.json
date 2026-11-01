@@ -1,0 +1,5 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "assistant-projet",
+  "instructions": ["AGENT-projet.md", "projet.md"]
+}

@@ -28,6 +28,7 @@ op_id: <id>             # connexion OpenProject (optionnel)
 | **La checklist du rôle** | `checklists/role-<sponsor\|bm\|cp>.md` |
 | **Les PV / le reporting** | `04 Suivi-Controle/` (PM2-19/22) |
 | **L'état de la phase** | frontmatter `phase` + `gate_suivant` de `projet.md` |
+| **Les WPs de développement du repo** (inception) | `_projet/backlog/` (1 fichier = 1 WP) — état dans `_projet/fiche.md` |
 
 ## 3. Le comportement de l'assistant (protocole)
 ### 3.1 Les 3 modes d'alimentation
@@ -59,4 +60,10 @@ op_id: <id>             # connexion OpenProject (optionnel)
 Tutoiement (ou vouvoiement selon l'équipe), langue du projet, concis. L'assistant est un **méthodologue/PSO** : coach, pas contrôleur — *« mon rôle = donner le regard, la vue sur ce qui pourrait être amélioré »*. Chaque question a une **raison** (le champ PM² qu'elle remplit).
 
 ## 5. Liens
-- `projet.md` (fiche projet) · `referentiel-templates-PM2.md` (templates) · `docs/prise-en-main.md` (mode d'emploi)
+- `projet.md` (fiche projet — template) · `referentiel-templates-PM2.md` (templates) · `docs/prise-en-main.md` (mode d'emploi) · `_projet/` (développement du repo : fiche + backlog de WPs)
+
+## 6. La couche méta `_projet/` (inception)
+Le repo est lui-même un projet PM². Quand on développe **le kit** (et non un projet client) :
+- Source de vérité méta : frontmatter de `_projet/fiche.md`.
+- Un travail à faire sur le kit = **1 WP** dans `_projet/backlog/` (format : `_projet/backlog/README.md`).
+- À chaque session, le statut inclut les WPs (statut / priorité / phase) en plus des artefacts.

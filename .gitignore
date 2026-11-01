@@ -10,3 +10,8 @@ desktop.ini
 # Python
 __pycache__/
 *.pyc
+
+# État local machine — généré par install.ps1 / install.sh.
+# Contient les chemins/instances de la MACHINE de l'utilisateur (jamais de données entreprise).
+# Comme un .env : reste local, ne part pas sur la forge.
+_projet/registry/connexions.md
