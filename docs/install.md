@@ -36,8 +36,19 @@ git clone <url-du-repo> ~/templates/assistant-projet-pm2
 ```
 Puis pour chaque projet : copier le contenu du kit dans `<vault>/projects/<Projet>/` (ou bouton Obsidian si le kit est dans les templates).
 
-## 4. Tests de fumée
+## 4. Projets déjà organisés (multi-racines)
+
+Tu as déjà tes dossiers de projets, peut-être par plateforme (`code/github/…`, `code/gitlab/…`) ? **Ne change rien** : le kit ne demande jamais de réorganiser, déplacer ou renommer.
+
+- Le wizard d'installation (`install.ps1` / `install.sh`) te demande **où vivent tes projets** : **1 ou plusieurs racines** (pas un « vault » monolithe). Il liste les dossiers détectés à côté du kit ; tu choisis par numéro, ou `A` pour ajouter un chemin, `V` pour passer.
+- **Racine non vide** → le wizard la liste (« je te montre, tu valides ») et note `déjà rempli, rien ne sera déplacé` dans le registre. **Racine absente** → création **uniquement** si tu confirmes.
+- Les racines sont écrites dans `_projet/registry/connexions.md` (ligne `- racines:`).
+- Dans chaque projet, le kit = **manifeste** (`projet.md`, frontmatter source de vérité) + couche **`_projet/`** (fiche, backlog, registres). Ajouter le kit à un dossier existant = **copie des fichiers du kit seulement** ; un conflit (`projet.md` ou `_projet/` déjà présent) est signalé, rien n'est écrasé.
+- Dans l'agent : **`/scan`** → scanne les racines, classe chaque dossier (`kit` / `partiel` / `plain`), annonce la phase des projets déjà connus, propose l'ajout du kit aux plain.
+
+## 5. Tests de fumée
 - [ ] `opencode --version` OK
-- [ ] Vault Obsidian ouvert, dossier `projects/` visible
+- [ ] `install.ps1` / `install.sh` relançable : récap honnête, registre à jour, zéro dossier parasite
+- [ ] `/scan` : les racines du registre sont scannées, les projets « kit » annoncés avec leur phase
 - [ ] Un projet cloné du kit : `AGENT-projet.md` + `projet.md` + 5 dossiers de phases présents
 - [ ] Dans opencode : `commence le projet Mon-Projet` → l'agent annonce la phase Lancement et propose le PM2-01
