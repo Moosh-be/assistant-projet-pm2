@@ -10,18 +10,21 @@
 | Rôle | Qui | Fait quoi |
 |---|---|---|
 | **Le kit** | ce repo | fournit les templates + les checklists + le protocole (réutilisable pour TOUS les projets) |
-| **Le coffre** | ton vault Obsidian (ou autre) | **contient** les projets (`<vault>/projects/<Projet>/`) |
+| **Les racines** | tes dossiers de projets (1..N, ex. `code/github/…` + `code/gitlab/…`) | **contiennent** les projets (`<racine>/<Projet>/`) — Obsidian ou autre, peu importe |
 | **Le marteau** | ton agent IA (opencode par défaut) | **lit** `AGENT-projet.md`, **interroge**, **remplit**, **gère les gates** |
 
+> Tu n'as **pas** besoin d'un coffre unique : le kit s'appuie sur des **racines de projets** (1 ou plusieurs). Si tu as déjà tes projets organisés, ils le restent — le kit s'ajoute, il ne réorganise pas.
+
 ## 2. Installation (une fois)
-→ voir [`install.md`](install.md) : installer **opencode** + **Obsidian** + cloner le kit.
+→ voir [`install.md`](install.md) : `install.ps1` / `install.sh` détectent l'environnement, te font pointer tes **racines** (1..N), et proposent opencode + les connexions.
 
 ## 3. Créer un projet (la prise en main)
-1. **Cloner le kit** dans le coffre :
+1. **Placer le kit** dans une racine, à côté de tes projets :
    ```
-   cp -r <chemin>/assistant-projet-pm2  <vault>/projects/Mon-Projet
+   # nouveau projet :
+   cp -r <chemin>/assistant-projet-pm2  <racine>/Mon-Projet
+   # OU exister déjà : laisser le dossier tel quel, l'agent (via /scan) ajoutera le kit si tu le veux
    ```
-   (ou « Nouveau projet » si ton coffre a un bouton ; le kit est un **template Obsidian** — voir §6)
 2. **Renommer / pré-remplir** `projet.md` : nom, méthode (`PM2`), les 4 rôles (Sponsor, BM, CP, MOE — logins ou noms).
 3. **Ouvrir la session agent** dans `<vault>/projects/Mon-Projet/` :
    ```
