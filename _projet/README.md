@@ -2,6 +2,8 @@
 
 Ce repo est à la fois un **kit** (templates + protocole pour des projets) et **un projet** (sa propre construction). Ce dossier contient la documentation PM² **du repo vu comme projet** — d'où l'inception : le kit remplit lui-même sa propre documentation.
 
+> ⭐ **Exemple vivant** : ce que vous voyez ici, c'est **exactement** ce qui se passe quand on utilise l'assistant sur un projet. Chaque WP du backlog a produit un commit, chaque session a laissé un log, chaque décision structurante est au registry.
+
 | Sous-dossier / fichier | Contenu |
 |---|---|
 | `fiche.md` | fiche projet PM² du repo (frontmatter = source de vérité de la couche méta) |
