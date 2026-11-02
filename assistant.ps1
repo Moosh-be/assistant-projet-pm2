@@ -68,6 +68,8 @@ function Get-Signaux([string]$d) {
     if (Test-Path (Join-Path $d $f)) { $s += $f }
   }
   if (Test-Path (Join-Path $d "src")) { $s += "src/" }
+  $mf = (Get-MetaFolder)
+  if (Test-Path (Join-Path $d $mf)) { $s += "$mf/" }
   return $s
 }
 
@@ -87,14 +89,22 @@ function Read-Frontmatter([string]$file) {
   return $res
 }
 
+function Test-ProjectDir([string]$dir) {
+  $mf = (Get-MetaFolder)
+  $hasP = Test-Path (Join-Path $dir "projet.md")
+  $hasM = Test-Path (Join-Path $dir "$mf/fiche.md")
+  return ($hasP -or $hasM)
+}
+
 function Find-Project([string]$name) {
+  # Un projet = un dossier avec projet.md OU avec <meta>/fiche.md (projet sans code).
   $c = Join-Path $Root $name
-  if (Test-Path (Join-Path $c "projet.md")) { return (Resolve-Path $c).Path }
+  if (Test-ProjectDir $c) { return (Resolve-Path $c).Path }
   $c = Join-Path (Get-Location).Path $name
-  if (Test-Path (Join-Path $c "projet.md")) { return (Resolve-Path $c).Path }
+  if (Test-ProjectDir $c) { return (Resolve-Path $c).Path }
   foreach ($r in (Get-Racines)) {
     $c = Join-Path $r $name
-    if (Test-Path (Join-Path $c "projet.md")) { return (Resolve-Path $c).Path }
+    if (Test-ProjectDir $c) { return (Resolve-Path $c).Path }
   }
   return $null
 }
@@ -200,11 +210,14 @@ function Cmd-Scan {
     $dirs = @(Get-ChildItem -Path $r -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike '.*' })
     if ($dirs.Count -eq 0) { Write-Host "  (vide)"; continue }
     $kits = @(); $parts = @(); $pourrs = @(); $plain = @()
+    $mfScan = (Get-MetaFolder)
     foreach ($d in $dirs) {
       $hasP = Test-Path (Join-Path $d.FullName "projet.md")
       $hasA = Test-Path (Join-Path $d.FullName "AGENT-projet.md")
+      $hasM = Test-Path (Join-Path $d.FullName $mfScan)
       if ($hasP -and $hasA) { $kits += $d }
       elseif ($hasP -or $hasA) { $parts += $d }
+      elseif ($hasM) { $parts += $d }
       else {
         $s = @(Get-Signaux $d.FullName)
         if ($s.Count -gt 0) { $pourrs += [pscustomobject]@{ Dir = $d; Sig = $s } }
@@ -220,7 +233,15 @@ function Cmd-Scan {
     }
     if ($parts.Count -gt 0) {
       Write-Host "  [A completer]"
-      foreach ($d in $parts) { Write-Host ("    ~ {0}  -  kit partiel (manque projet.md ou AGENT-projet.md)" -f $d.Name) }
+      foreach ($d in $parts) {
+        $hasP = Test-Path (Join-Path $d.FullName "projet.md")
+        $hasA = Test-Path (Join-Path $d.FullName "AGENT-projet.md")
+        $hasM = Test-Path (Join-Path $d.FullName $mfScan)
+        $detail = "kit partiel (manque projet.md ou AGENT-projet.md)"
+        if ($hasM -and -not $hasP) { $detail = "projet sans code (ne contient que $mfScan) -> assistant add" }
+        elseif ($hasM -and -not $hasA) { $detail = "kit partiel (manque AGENT-projet.md)" }
+        Write-Host ("    ~ {0}  -  {1}" -f $d.Name, $detail)
+      }
     }
     if ($pourrs.Count -gt 0) {
       Write-Host "  [Pourraient (signaux)]"
@@ -250,17 +271,23 @@ function Cmd-Statut([string]$name) {
     Write-Host "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
     return
   }
-  $fm = Read-Frontmatter (Join-Path $p "projet.md")
+  # Source de verite : projet.md sinon _meta/fiche.md (projet sans code - WP-0019).
+  $mf = (Get-MetaFolder)
+  $srcFile = Join-Path $p "projet.md"
+  $srcLabel = "projet.md"
+  if (-not (Test-Path $srcFile)) { $srcFile = Join-Path $p "$mf/fiche.md"; $srcLabel = "$mf/fiche.md" }
+  $fm = Read-Frontmatter $srcFile
   Write-Host ""
   Write-Host "=== Statut : $(Split-Path $p -Leaf) ==="
+  Write-Host "  (source : $srcLabel)"
   Write-Host ("  Phase : {0}   |   Gate suivant : {1}" -f $fm["phase"], $fm["gate_suivant"])
   $r1 = @(); if ($fm["sponsor"]) { $r1 += "sponsor: $($fm['sponsor'])" }; if ($fm["bm"]) { $r1 += "bm: $($fm['bm'])" }; if ($fm["cp"]) { $r1 += "cp: $($fm['cp'])" }; if ($fm["moe"]) { $r1 += "moe: $($fm['moe'])" }
   if ($r1.Count -gt 0) { Write-Host ("  Roles   : {0}" -f ($r1 -join "  |  ")) } else { Write-Host "  Roles   : (non identifies)" }
   $c1 = @(); if ($fm["sp_project"]) { $c1 += "SP: $($fm['sp_project'])" }; if ($fm["op_id"]) { $c1 += "OP: $($fm['op_id'])" }
   if ($c1.Count -gt 0) { Write-Host ("  Tickets : {0}" -f ($c1 -join "  |  ")) } else { Write-Host "  Tickets : (aucune connexion active)" }
-  # Table "Etat de la phase" (section 3 du projet.md)
+  # Table "Etat de la phase" (section 3) - lue dans la meme source (projet.md ou fiche.md)
   $in3 = $false; $table = $false
-  $lines3 = [System.IO.File]::ReadAllLines((Join-Path $p "projet.md"), [System.Text.Encoding]::UTF8)
+  $lines3 = [System.IO.File]::ReadAllLines($srcFile, [System.Text.Encoding]::UTF8)
   foreach ($l in $lines3) {
     if ($l -match '^## 3\.') { $in3 = $true; continue }
     if ($in3 -and $l -match '^## ') { break }
@@ -271,8 +298,8 @@ function Cmd-Statut([string]$name) {
   }
 }
 
-function Cmd-New([string]$name, [string]$rootOverride) {
-  if ([string]::IsNullOrWhiteSpace($name)) { Write-Host "Usage : assistant new <nom> [racine]"; return }
+function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
+  if ([string]::IsNullOrWhiteSpace($name)) { Write-Host "Usage : assistant new <nom> [racine] [-doc]"; return }
   # NB : pas de $root ici - PowerShell est insensible a la casse, $root ecraserait le $Root global (chemin du kit).
   $rroot = $rootOverride
   if ([string]::IsNullOrWhiteSpace($rroot)) {
@@ -282,6 +309,24 @@ function Cmd-New([string]$name, [string]$rootOverride) {
   }
   $target = Join-Path $rroot $name
   if (Test-Path $target) { Write-Host "'$target' existe deja -> rien n'est cree ni ecrase."; return }
+  if ($doc) {
+    # Projet sans code (WP-0019) : SEUL le dossier meta est cree (fiche + squelette), pas le kit.
+    $date = Get-Date -Format "yyyy-MM-dd"
+    $utf8 = New-Object System.Text.UTF8Encoding($false)
+    New-Item -ItemType Directory -Force -Path "$target/$MetaFolder/backlog","$target/$MetaFolder/logs","$target/$MetaFolder/report","$target/$MetaFolder/registry" | Out-Null
+    $fiche = [System.IO.File]::ReadAllText((Join-Path $Root "tools/templates/fiche-projet.md"), [System.Text.Encoding]::UTF8)
+    $fiche = $fiche.Replace("{{NOM}}", $name).Replace("{{DATE}}", $date)
+    [System.IO.File]::WriteAllText((Join-Path $target "$MetaFolder/fiche.md"), $fiche, $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $target "$MetaFolder/logs/.gitkeep"), "", $utf8)
+    [System.IO.File]::WriteAllText((Join-Path $target "$MetaFolder/report/.gitkeep"), "", $utf8)
+    Write-Host ""
+    Write-Host "Projet documentaire cree (sans kit) : $target"
+    Write-Host ("  {0}/ a l etat (fiche + squelette) - le repo ne contient que la couche meta." -f $MetaFolder)
+    Write-Host ""
+    Write-Host "  Plus tard, si le kit complet est utile : assistant add <nom>  (zero ecrasement, $MetaFolder conserve)"
+    Write-Host "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+    return
+  }
   New-Item -ItemType Directory -Force -Path $target | Out-Null
   $res = Copy-Kit -Target $target -Nom $name
   Write-Host ""
@@ -294,8 +339,17 @@ function Cmd-New([string]$name, [string]$rootOverride) {
 
 function Cmd-Add([string]$path) {
   if ([string]::IsNullOrWhiteSpace($path)) { Write-Host "Usage : assistant add <dossier>"; return }
+  # Resolution : chemin absolu ou relatif au dossier courant ; sinon recherche sous chaque racine.
   $target = (Resolve-Path $path -ErrorAction SilentlyContinue)
-  if ($null -eq $target) { Write-Host "Dossier introuvable : $path (pour un projet NEUF : assistant new <nom>)"; return }
+  if ($null -eq $target) {
+    $found = @()
+    foreach ($r in (Get-Racines)) {
+      $c = Join-Path $r $path
+      if (Test-Path $c -PathType Container) { $found += (Resolve-Path $c) }
+    }
+    if ($found.Count -eq 0) { Write-Host "Dossier introuvable : $path (cherche le dossier courant + les racines) - pour un projet NEUF : assistant new <nom>"; return }
+    $target = $found[0]
+  }
   $target = $target.Path
   if (-not (Test-Path (Join-Path $target "projet.md")) -and -not (Test-Path (Join-Path $target "AGENT-projet.md"))) {
     Write-Host "Aucun marqueur de kit dans '$target' : ajout du kit dans un dossier vierge (OK)."
@@ -320,7 +374,7 @@ function Cmd-Commence([string]$name) {
   }
   Write-Host ""
   Write-Host "Handoff vers l'agent : demarrage de '$name' dans opencode."
-  Write-Host "  (l'agent lit AGENT-projet.md -> annonce la phase -> propose le prochain artefact)"
+  Write-Host "  (l'agent lit AGENT-projet.md ou _meta/fiche.md -> annonce la phase -> propose le prochain artefact)"
   Push-Location $p
   try { opencode } finally { Pop-Location }
 }
@@ -332,7 +386,7 @@ function Show-Menu {
   Write-Host "================================================"
   Write-Host "  scan                 les projets des racines : assistes / pourraient / sans signal"
   Write-Host "  statut <projet>      phase + gate + avancement"
-  Write-Host "  new <nom> [racine]   creer un projet (kit + _meta neuf)"
+  Write-Host "  new <nom> [racine] [-doc]   creer un projet  (-doc = SEUL _meta, sans kit : projet sans code)"
   Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
   Write-Host "------------------------------------------------"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
@@ -347,7 +401,16 @@ $c = $args[0] -replace '^[/-]', ''
 switch -regex ($c) {
   '^scan$' { Cmd-Scan }
   '^statut$' { Cmd-Statut $args[1] }
-  '^new$' { Cmd-New $args[1] $(if ($args.Count -ge 3) { $args[2] } else { "" }) }
+  '^new$' {
+    # Arguments de `new` : <nom> [racine] [-doc] (l'ordre du flag importe pas)
+    $docFlag = $false; $nName = ""; $nRoot = ""
+    if ($args.Count -ge 2) {
+      foreach ($a in $args[1..($args.Count-1)]) {
+        if ($a -eq "-doc") { $docFlag = $true } elseif ($nName -eq "") { $nName = $a } else { $nRoot = $a }
+      }
+    }
+    Cmd-New $nName $nRoot $docFlag
+  }
   '^add$' { Cmd-Add $args[1] }
   '^commence$' { Cmd-Commence $args[1] }
   '^menu$|^\?$' { Show-Menu }

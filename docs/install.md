@@ -42,7 +42,7 @@
 |---|---|---|
 | `scan` | déterministe | les projets des racines : 3 buckets (assistés / pourraient / sans signal) + signaux + phase/gate |
 | `statut <projet>` | déterministe | phase + gate + rôles + tickets + tableau d'avancement |
-| `new <nom> [racine]` | déterministe | crée un projet (kit + `_meta/` neuf, `projet.md` pré-rempli) |
+| `new <nom> [racine] [-doc]` | déterministe | crée un projet (kit + `_meta/` neuf, `projet.md` pré-rempli) · **`-doc`** = projet sans code : seul `_meta/` est créé (fiche + squelette), le kit n'est pas copié — à compléter plus tard avec `add` |
 | `add <dossier>` | déterministe | ajoute le kit à un projet existant — **jamais d'écrasement** (le pré-existant est signalé et ignoré) |
 | `commence <nom>` | handoff IA | ouvre opencode dans le projet — l'agent prend le relais (mode B/C) |
 | `menu` / `?` | — | le menu |

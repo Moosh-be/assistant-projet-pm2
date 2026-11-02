@@ -59,18 +59,19 @@ get_signaux() { # get_signaux <dir> → un signal par ligne
     [ -f "$d/$f" ] && echo "$f"
   done
   [ -d "$d/src" ] && echo "src/"
+  [ -d "$d/$META" ] && echo "$META/"
   return 0
 }
 
-find_project() { # find_project <nom> → chemin du projet (projet.md présent) ou rien
+find_project() { # find_project <nom> → chemin du projet (projet.md OU <meta>/fiche.md) ou rien
   local name="$1" c
-  c="$ROOT/$name"; [ -f "$c/projet.md" ] && { cd "$c" && pwd; return; }
-  c="$(pwd)/$name"; [ -f "$c/projet.md" ] && { cd "$c" && pwd; return; }
+  c="$ROOT/$name"; { [ -f "$c/projet.md" ] || [ -f "$c/$META/fiche.md" ]; } && { cd "$c" && pwd; return; }
+  c="$(pwd)/$name"; { [ -f "$c/projet.md" ] || [ -f "$c/$META/fiche.md" ]; } && { cd "$c" && pwd; return; }
   local r
   while IFS= read -r r; do
     [ -z "$r" ] && continue
     c="$r/$name"
-    [ -f "$c/projet.md" ] && { cd "$c" && pwd; return; }
+    { [ -f "$c/projet.md" ] || [ -f "$c/$META/fiche.md" ]; } && { cd "$c" && pwd; return; }
   done < <(get_racines)
   return 1
 }
@@ -172,13 +173,14 @@ cmd_scan() {
     while IFS= read -r d; do
       [ -z "$d" ] && continue
       local n; n="$(basename "$d")"
-      local hasP=0 hasA=0
+      local hasP=0 hasA=0 hasM=0
       [ -f "$d/projet.md" ] && hasP=1
       [ -f "$d/AGENT-projet.md" ] && hasA=1
+      [ -d "$d/$META" ] && hasM=1
       if [ $hasP -eq 1 ] && [ $hasA -eq 1 ]; then
         kits="${kits}${n}
 "; k_n=$((k_n+1))
-      elif [ $hasP -eq 1 ] || [ $hasA -eq 1 ]; then
+      elif [ $hasP -eq 1 ] || [ $hasA -eq 1 ] || [ $hasM -eq 1 ]; then
         parts="${parts}${n}
 "; p_n=$((p_n+1))
       else
@@ -206,7 +208,18 @@ cmd_scan() {
     fi
     if [ $p_n -gt 0 ]; then
       echo "  [À compléter]"
-      while IFS= read -r n; do [ -n "$n" ] && printf '    ~ %s  -  kit partiel\n' "$n"; done <<< "$parts"
+      while IFS= read -r n; do
+        [ -z "$n" ] && continue
+        local hP=0 hA=0 hM=0
+        [ -f "$r/$n/projet.md" ] && hP=1
+        [ -f "$r/$n/AGENT-projet.md" ] && hA=1
+        [ -d "$r/$n/$META" ] && hM=1
+        local detail="kit partiel"
+        if [ $hM -eq 1 ] && [ $hP -eq 0 ]; then detail="projet sans code (ne contient que $META) -> assistant add"
+        elif [ $hM -eq 1 ]; then detail="kit partiel (manque AGENT-projet.md)"
+        fi
+        printf '    ~ %s  -  %s\n' "$n" "$detail"
+      done <<< "$parts"
     fi
     if [ $po_n -gt 0 ]; then
       echo "  [Pourraient (signaux)]"
@@ -238,34 +251,38 @@ cmd_statut() {
     echo "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
     return
   fi
+  # Source de vérité : projet.md sinon <meta>/fiche.md (projet sans code — WP-0019).
+  local src="$p/projet.md"
+  [ -f "$src" ] || src="$p/$META/fiche.md"
   echo ""; echo "=== Statut : $(basename "$p") ==="
+  echo "  (source : $(basename "$src"))"
   local phase gate sp op spon bm cp moe
-  phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$p/projet.md")"
-  gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$p/projet.md")"
+  phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+  gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
   printf '  Phase : %s   |   Gate suivant : %s\n' "${phase:-?}" "${gate:-?}"
-  spon="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sponsor:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
-  bm="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^bm:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
-  cp2="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^cp:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
-  moe="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^moe:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
+  spon="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sponsor:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  bm="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^bm:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  cp2="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^cp:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  moe="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^moe:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   local roles=""
   [ -n "$spon" ] && roles="sponsor: $spon"
   [ -n "$bm" ] && roles="${roles:+$roles  |  }bm: $bm"
   [ -n "$cp2" ] && roles="${roles:+$roles  |  }cp: $cp2"
   [ -n "$moe" ] && roles="${roles:+$roles  |  }moe: $moe"
   if [ -n "$roles" ]; then printf '  Rôles   : %s\n' "$roles"; else echo "  Rôles   : (non identifiés)"; fi
-  sp="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sp_project:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
-  op="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^op_id:/){print $2; exit}}' "$p/projet.md" | sed 's/^"//;s/"$//')"
+  sp="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sp_project:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  op="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^op_id:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   local tix=""
   [ -n "$sp" ] && tix="SP: $sp"
   [ -n "$op" ] && tix="${tix:+$tix  |  }OP: $op"
   if [ -n "$tix" ]; then printf '  Tickets : %s\n' "$tix"; else echo "  Tickets : (aucune connexion active)"; fi
   echo "  Avancement :"
-  awk '/^## 3\./{in3=1;next} in3 && /^## /{exit} in3 && /^[[:space:]]*\|/{print "    " $0}' "$p/projet.md"
+  awk '/^## 3\./{in3=1;next} in3 && /^## /{exit} in3 && /^[[:space:]]*\|/{print "    " $0}' "$src"
 }
 
 cmd_new() {
-  local name="$1" rooto="$2"
-  if [ -z "$name" ]; then echo "Usage : assistant new <nom> [racine]"; return; fi
+  local name="$1" rooto="$2" doc="$3"
+  if [ -z "$name" ]; then echo "Usage : assistant new <nom> [racine] [-doc]"; return; fi
   local rroot="$rooto"
   if [ -z "$rroot" ]; then
     local first; first="$(get_racines | head -n1)"
@@ -274,6 +291,20 @@ cmd_new() {
   fi
   local target="$rroot/$name"
   if [ -e "$target" ]; then echo "'$target' existe déjà → rien n'est créé ni écrasé."; return; fi
+  if [ "$doc" = "1" ]; then
+    # Projet sans code (WP-0019) : SEUL le dossier méta est créé (fiche + squelette), pas le kit.
+    local date; date="$(date +%F)"
+    mkdir -p "$target/$META/backlog" "$target/$META/logs" "$target/$META/report" "$target/$META/registry"
+    sed -e "s/{{NOM}}/$name/g" -e "s/{{DATE}}/$date/g" \
+      "$ROOT/tools/templates/fiche-projet.md" > "$target/$META/fiche.md"
+    : > "$target/$META/logs/.gitkeep"
+    : > "$target/$META/report/.gitkeep"
+    echo ""; echo "Projet documentaire créé (sans kit) : $target"
+    echo "  $META/ à l'état (fiche + squelette) — le repo ne contient que la couche méta."
+    echo ""; echo "  Plus tard, si le kit complet est utile : assistant add <nom>  (zéro écrasement, $META conservé)"
+    echo "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+    return
+  fi
   mkdir -p "$target"
   local skipfile; skipfile="$(mktemp)"
   local copied
@@ -289,9 +320,17 @@ cmd_new() {
 cmd_add() {
   local path="$1"
   if [ -z "$path" ]; then echo "Usage : assistant add <dossier>"; return; fi
-  if [ ! -d "$path" ]; then echo "Dossier introuvable : $path (pour un projet NEUF : assistant new <nom>)"; return; fi
-  local target
-  target="$(cd "$path" && pwd)"
+  local target=""
+  # Résolution : chemin absolu ou relatif au dossier courant ; sinon recherche sous chaque racine.
+  if [ -d "$path" ]; then
+    target="$(cd "$path" && pwd)"
+  else
+    local r
+    while IFS= read -r r; do
+      [ -n "$r" ] && [ -d "$r/$path" ] && { target="$(cd "$r/$path" && pwd)"; break; }
+    done < <(get_racines)
+  fi
+  if [ -z "$target" ]; then echo "Dossier introuvable : $path (cherche le dossier courant + les racines) — pour un projet NEUF : assistant new <nom>"; return; fi
   if [ ! -f "$target/projet.md" ] && [ ! -f "$target/AGENT-projet.md" ]; then
     echo "Aucun marqueur de kit dans '$target' : ajout du kit dans un dossier vierge (OK)."
   fi
@@ -315,7 +354,7 @@ cmd_commence() {
     return
   fi
   echo ""; echo "Handoff vers l'agent : démarrage de '$name' dans opencode."
-  echo "  (l'agent lit AGENT-projet.md → annonce la phase → propose le prochain artefact)"
+  echo "  (l'agent lit AGENT-projet.md ou _meta/fiche.md → annonce la phase → propose le prochain artefact)"
   ( cd "$p" && exec opencode )
 }
 
@@ -326,8 +365,8 @@ show_menu() {
  assistant - menu  (sans IA : rapide, gratuit)
 ================================================
   scan                 les projets des racines : assistés / pourraient / sans signal
-  statut <projet>      phase + gate + avancement
-  new <nom> [racine]   créer un projet (kit + _meta neuf)
+  statut <projet>      phase + gate + avancement (lit projet.md ou _meta/fiche.md)
+  new <nom> [racine] [-doc]   créer un projet  (-doc = SEUL _meta, sans kit : projet sans code)
   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
 ------------------------------------------------
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
@@ -343,7 +382,14 @@ c="${1#/}"; c="${c/-/}"
 case "$c" in
   scan) cmd_scan ;;
   statut) cmd_statut "${2:-}" ;;
-  new) cmd_new "${2:-}" "${3:-}" ;;
+  new)
+    # arguments de new : <nom> [racine] [-doc] (l'ordre du flag importe peu)
+    nname=""; nroot=""; ndoc=0
+    shift
+    for a in "$@"; do
+      if [ "$a" = "-doc" ]; then ndoc=1; elif [ -z "$nname" ]; then nname="$a"; else nroot="$a"; fi
+    done
+    cmd_new "$nname" "$nroot" "$ndoc" ;;
   add) cmd_add "${2:-}" ;;
   commence) cmd_commence "${2:-}" ;;
   menu|"\?") show_menu ;;
