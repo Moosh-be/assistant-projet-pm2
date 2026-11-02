@@ -376,4 +376,4 @@ if ($rootsStr -ne "") {
   Write-Host " Conseil : aucun projet scanne pour l'instant -> cree ton premier projet :"
   Write-Host "   .\assistant.ps1 new <Nom>   (ou, dans l'agent : 'cree un projet <Nom>')"
   Write-Host " ...ou relance l'install pour definir des racines."
-}      
+}
