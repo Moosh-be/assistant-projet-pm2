@@ -1,4 +1,4 @@
-# Installation — le marteau (opencode) + le coffre (Obsidian)
+# Installation — le marteau (opencode) + le coffre (Obsidian) + le menu natif (assistant.ps1 / .sh)
 
 > Par défaut : **opencode** (agent IA) + **Obsidian** (coffre Markdown).
 > Les deux sont interchangeables : n'importe quel **agent qui lit un dossier de Markdown** (opencode, Claude Code, gemini-cli…) + n'importe quel **gestionnaire de notes Markdown** (Obsidian, Logseq, VS Code…). Ici on installe la pile par défaut.
@@ -30,25 +30,48 @@
 
 > **Pourquoi « le marteau » ?** l'agent est l'outil qui frappe : il ne contient pas la connaissance du projet — **c'est le dossier (le kit + AGENT-projet.md) qui la contient**. Changer de marteau ne change rien au projet.
 
-## 3. Brancher le kit (une fois)
+## 3. Le menu natif — `assistant.ps1` / `assistant.sh` (sans IA)
+
+> **Principe** : *tout ce qui est faisable sans IA, se fait sans IA.* Le script natif (sans dépendance, aucun package) fait le travail **déterministe** ; l'agent ne raisonne que pour conduire, écouter, décider.
+
+À la racine du kit :
+- Windows : `.\assistant.ps1 <cmd>` (PowerShell 5.1+ / pwsh, ASCII pur)
+- macOS / Linux : `./assistant.sh <cmd>`
+
+| Commande | Nature | Ce qu'elle fait |
+|---|---|---|
+| `scan` | déterministe | les projets des racines : 3 buckets (assistés / pourraient / sans signal) + signaux + phase/gate |
+| `statut <projet>` | déterministe | phase + gate + rôles + tickets + tableau d'avancement |
+| `new <nom> [racine]` | déterministe | crée un projet (kit + `_projet/` neuf, `projet.md` pré-rempli) |
+| `add <dossier>` | déterministe | ajoute le kit à un projet existant — **jamais d'écrasement** (le pré-existant est signalé et ignoré) |
+| `commence <nom>` | handoff IA | ouvre opencode dans le projet — l'agent prend le relais (mode B/C) |
+| `menu` / `?` | — | le menu |
+
+> **Source unique** : la logique de scan/statut vit **une seule fois** — dans le script. Les commandes opencode `/scan` et `/statut` **l'appellent** ; l'agent présente le résultat et conduit (il ne re-développe pas la logique).
+
+## 4. Brancher le kit (une fois)
 ```
 git clone <url-du-repo> ~/templates/assistant-projet-pm2
 ```
-Puis pour chaque projet : copier le contenu du kit dans `<vault>/projects/<Projet>/` (ou bouton Obsidian si le kit est dans les templates).
+Puis pour chaque projet : `assistant.ps1 new <Nom>` (création) ou `assistant.ps1 add <dossier>` (projet existant) — ou copier le contenu du kit dans `<vault>/projects/<Projet>/` (bouton Obsidian si le kit est dans les templates).
 
-## 4. Projets déjà organisés (multi-racines)
+## 5. Projets déjà organisés (multi-racines)
 
 Tu as déjà tes dossiers de projets, peut-être par plateforme (`code/github/…`, `code/gitlab/…`) ? **Ne change rien** : le kit ne demande jamais de réorganiser, déplacer ou renommer.
 
-- Le wizard d'installation (`install.ps1` / `install.sh`) te demande **où vivent tes projets** : **1 ou plusieurs racines** (pas un « vault » monolithe). Il liste les dossiers détectés à côté du kit ; tu choisis par numéro, ou `A` pour ajouter un chemin, `V` pour passer.
+- Le wizard d'installation (`install.ps1` / `install.sh`) te demande **où vivent tes projets** : **1 ou plusieurs racines** (pas un « vault » monolithe). **Une racine = un dossier qui *contient* des projets (1 projet = 1 sous-dossier)**. Le wizard propose : le **dossier du kit + 2 niveaux au-dessus** (si tes projets vivent dans le même dossier que le kit — cas le plus fréquent) + **les dossiers à côté** (max 5) ; tu choisis par numéro, ou `A` pour ajouter un chemin (tout autre niveau), `V` pour passer.
 - **Racine non vide** → le wizard la liste (« je te montre, tu valides ») et note `déjà rempli, rien ne sera déplacé` dans le registre. **Racine absente** → création **uniquement** si tu confirmes.
-- Les racines sont écrites dans `_projet/registry/connexions.md` (ligne `- racines:`).
+- Les racines sont écrites dans la **config machine à la racine du kit** (`.assistant.config`, gitignored — WP-0017 ; le wizard utilise le 1ᵉʳ des 3 noms possibles `.assistant.config` / `assistant.config` / `assistant.config.md`). Les **secrets** (tokens) vivent dans `.assistant-projet.env` (généré par le wizard, saisie masquée), jamais dans la config ni dans un registre.
 - Dans chaque projet, le kit = **manifeste** (`projet.md`, frontmatter source de vérité) + couche **`_projet/`** (fiche, backlog, registres). Ajouter le kit à un dossier existant = **copie des fichiers du kit seulement** ; un conflit (`projet.md` ou `_projet/` déjà présent) est signalé, rien n'est écrasé.
-- Dans l'agent : **`/scan`** → scanne les racines, classe chaque dossier (`kit` / `partiel` / `plain`), annonce la phase des projets déjà connus, propose l'ajout du kit aux plain.
+- **Scan** : `assistant.ps1 scan` (natif) — ou `/scan` dans l'agent (même logique, source unique) → liste les projets en **3 buckets** (`assistés` / `pourraient` (≥1 signal léger : `.git`, `package.json`, `README`…) / `sans signal`) + les `partiel` à compléter, annonce la phase des projets déjà connus, propose l'ajout du kit aux dossiers « pourraient ».
+- **Ajout du kit** : `assistant.ps1 add <dossier>` (natif, jamais d'écrasement) — le pré-existant (`projet.md` ou `_projet/`) est signalé et ignoré.
+- À l'**activation** d'un projet (« commence le projet X », ou `assistant commence <nom>`), l'agent propose les **add-ons pertinents** d'après les signaux de CE projet (ex. `.git` + remote GitHub → GitHub Issue avec le repo pré-rempli) et remplit le frontmatter du projet (`op_id`, `sp_project`).
 
-## 5. Tests de fumée
+## 6. Tests de fumée
 - [ ] `opencode --version` OK
-- [ ] `install.ps1` / `install.sh` relançable : récap honnête, registre à jour, zéro dossier parasite
-- [ ] `/scan` : les racines du registre sont scannées, les projets « kit » annoncés avec leur phase
-- [ ] Un projet cloné du kit : `AGENT-projet.md` + `projet.md` + 5 dossiers de phases présents
+- [ ] `install.ps1` / `install.sh` relançable : récap honnête, registre à jour, zéro dossier parasite, **menu natif + conseil affichés à la fin** (scan si projets existants, sinon créer un premier projet)
+- [ ] `assistant.ps1 scan` / `./assistant.sh scan` : les racines du registre sont scannées, les 3 buckets affichés, les projets « assistés » annoncés avec leur phase
+- [ ] `assistant new <nom>` (dossier temp) : `projet.md` + `_projet/` neuf + `AGENT-projet.md` présents, `node_modules` absent
+- [ ] `assistant add <dossier>` (dossier temp avec contenu pré-existant) : zéro écrasement, les ignorés sont signalés
+- [ ] `/scan` + `/statut` dans opencode : appellent le script natif (pas une 2ᵉ implémentation)
 - [ ] Dans opencode : `commence le projet Mon-Projet` → l'agent annonce la phase Lancement et propose le PM2-01

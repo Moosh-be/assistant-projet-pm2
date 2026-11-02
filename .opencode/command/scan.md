@@ -1,48 +1,39 @@
 ---
-description: Scan des racines de projets (registres _projet/registry/connexions.md) — classe chaque dossier (kit / partiel / plain), annonce la phase des projets déjà connus, propose l'ajout du kit aux plain.
+description: Scan des racines de projets — liste les projets en 3 buckets (assistés / pourraient / sans signal) + signaux légers, annonce la phase des projets connus, propose l'ajout du kit.
 agent: assistant-projet
 ---
 
-Lance le **scan des racines de projets** (WP-0005). Le but : voir ce qui vit déjà dans les racines, sans rien déplacher ni réécrire.
+Lance le **scan des racines de projets** (WP-0005).
 
-## 1. Lire les racines
+> **Source unique (WP-0016)** : la logique de scan est déterministe → elle vit **dans le script natif** `assistant.ps1` / `assistant.sh`. Cette commande l'**appelle** : l'IA ne re-développe PAS la logique de scan, elle présente le résultat et conduit.
 
-Ouvrir `_projet/registry/connexions.md` → ligne `- racines:` dans le bloc wizard. Chaque entrée de la forme `<chemin> (<qualificatif>)` = une racine. Si `aucune` ou ligne absente : demander à l'utilisateur de relancer `install` pour définir les racines, et s'arrêter là.
+## 1. Exécuter le script natif
 
-## 2. Scanner chaque racine
+Selon l'OS (le kit = le dossier courant) :
 
-Pour chaque racine, lister les **dossiers enfants** (pas les fichiers, pas les dossiers cachés `.*`). Pour CHAQUE dossier, classifier :
+- Windows : `powershell -NoProfile -ExecutionPolicy Bypass -File .\assistant.ps1 scan`
+- macOS / Linux : `./assistant.sh scan`
 
-| Classe | Test | Sens |
-|---|---|---|
-| **kit** | a `projet.md` **et** `AGENT-projet.md` | un projet PM² déjà connu |
-| **partiel** | a l'un des deux seulement | un kit inachevé / à compléter |
-| **plain** | aucun des deux | un dossier qui n'est pas encore un projet PM² |
+→ le script lit les racines de la config machine à la racine du kit (`.assistant.config`, WP-0017) et affiche :
+- par racine : 4 buckets — **Assistés** (kit complet : `projet.md` + `AGENT-projet.md`, avec phase + gate), **À compléter** (kit partiel), **Pourraient** (signaux légers : `.git`, `package.json`, `src/`, …), **Sans signal** ;
+- le résumé par racine + le total global.
 
-## 3. Ce qu'on fait par classe
+Si le script signale « Aucune racine définie » → demander de relancer l'install (`install.ps1` / `install.sh`) pour définir les racines, et s'arrêter là.
 
-- **kit** → lire le frontmatter de `projet.md` et annoncer : `phase:` courante + `gate_suivant:`. Format : `  ✔ <nom> — phase <Phase>, gate <Gate>`. (Le projet est déjà connu, rien à faire.)
-- **partiel** → annoncer ce qui manque (`projet.md` ou `AGENT-projet.md`) et proposer de compléter (sans inventer : poser les questions du template).
-- **plain** → proposer **deux** options, sans jamais déplacer ni réécrire :
-  - **ajouter le kit** → copier les fichiers du kit (`projet.md`, `AGENT-projet.md`, `referentiel-templates-PM2.md`, `checklists/`, `docs/`, `tools/`, `opencode.json`, `_projet/`) DANS le dossier existant. **Jamais** écraser un fichier pré-existant ; si `projet.md` ou `_projet/` existe déjà dans la cible → conflit signalé, l'utilisateur tranche.
-  - **laisser tel quel** → on ne touche à rien.
+## 2. Conduire (le rôle de l'agent)
 
-> Règle de tolérance au pré-existant : le kit **s'ajoute** à un dossier qui existe déjà (manifeste `projet.md` + couche `_projet/`). Il ne demande jamais de réorganiser, déplacer ou renommer les fichiers de l'utilisateur.
+Sur le résultat du script :
 
-## 4. Résumé final
+1. **Assistés** → rien à faire : annoncer la phase + le gate, proposer la reprise (`assistant commence <nom>` — ou « commence le projet <nom> »).
+2. **À compléter** → annoncer ce qui manque (projet.md ou AGENT-projet.md), proposer de compléter via `add`.
+3. **Pourraient** → proposer d'ajouter le kit, **au dossier**, sans déplacer ni réécrire : `assistant add <dossier>`. **Jamais** écraser un fichier pré-existant (le script le garantit et l'affiche) ; si `projet.md` ou `_projet/` existe → le script l'ignore et le signale, l'utilisateur tranche.
+4. **Sans signal** → lister seulement, **ne pas pousser** l'ajout du kit. Le « pourrait » est indicatif : 1 signal ≠ projet certain.
 
-Terminer par un tableau récapitulatif :
-```
-Racine <chemin> : <N> dossiers scannés — <x> kit · <y> partiel · <z> plain
-```
-Puis la ligne globale : `Total : <N> dossiers · <x> kit · <y> partiel · <z> plain · <w> à ajouter`.
-
-Et l'inversement de la question : **c'est la racine qui contient les projets, pas le projet qui vit dans le kit.**
-
-## 5. Contraintes
+## 3. Contraintes
 
 - Ne **jamais** : déplacer, renommer, supprimer ni réécrire un fichier pré-existant.
-- Ne **jamais** remplir un template : le scan identifie et propose, l'assistant remplit ensuite en mode B.
-- Proposer **un seul** projet à traiter à la fois (règle du kit), commencer par les `partiel` puis les `plain` que l'utilisateur veut adopter.
+- Ne **jamais** remplir un template au passage : le scan identifie et propose, l'assistant remplit ensuite en mode B.
+- Proposer **un seul** projet à traiter à la fois (règle du kit) : commencer par les *à compléter*, puis les *pourraient* que l'utilisateur veut adopter.
+- L'inversement de la question : **c'est la racine qui contient les projets, pas le projet qui vit dans le kit.**
 
 $ARGUMENTS
