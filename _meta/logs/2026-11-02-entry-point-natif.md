@@ -64,6 +64,27 @@
 **Tests sandbox** (copies du kit en temp, jamais la machine réelle) :
 - migration du token ✅ (bash + PS) · génération `.env` + saisie masquée/placeholder ✅ · `scan` lit les racines depuis la config ✅ · idempotence (1 seul bloc wizard, 1 seul `meta_folder` après 2ᵉ run, clé conservée si non resaisie) ✅ · `meta_folder = _pm` respecté par `new` ✅ · syntaxe : PS parse AST 0 erreur, `bash -n` OK, `assistant.ps1` = 0 byte non-ASCII, `install.ps1` ASCII pur.
 
+## WP-0019 — un projet n'est PAS forcément un projet de code
+
+**Position verrouillée** (verbatim utilisateur) : « mon projet n'est pas forcément (et ça devrait même être la norme) un projet de code — il est imaginable que mon repo ne contienne que `_meta` ».
+
+**Trou identifié** : le kit traitait un projet comme « dossier de code + kit posé dessus » — `scan` ne classait « assisté » que sur `projet.md`+`AGENT-projet.md`, `statut`/`commence` n'existaient qu'avec `projet.md` → un repo contenant **que `_meta/`** était « sans signal » et invisible.
+
+**Implémentation** (PS + bash, tests sandbox E2E verts des deux côtés) :
+- `statut` / `commence` / `Find-Project` : un projet = dossier avec `projet.md` **ou** `<meta>/fiche.md` ; `statut` affiche `(source : …)` — les deux fichiers partagent volontairement les mêmes clés de frontmatter + la table `## 3.`.
+- `scan` : `<meta>/` est un signal ; sans kit mais avec `<meta>/` → **[À compléter] — « projet sans code → assistant add »**.
+- **`assistant new <nom> -doc`** : projet minimal = **seul** `<meta>/` (fiche + squelette), sans kit ; le kit se complète ensuite avec `add` (zéro écrasement, `<meta>/` conservé).
+- Bug PS trouvé : `Test-Path x -or Test-Path y` échoue (`-or` absorbé comme paramètre) → helper `Test-ProjectDir`.
+- Couche méta : ticket `backlog/WP-0019-projet-sans-code.md` + ligne `decisions.md` + fiche 11/19.
+
+**Reste** : validation terrain (`new -doc` + `statut` sur un vrai projet documentaire).
+
+## Corrections mineures de session (validées terrain)
+
+- **Corruption NUL** : `install.ps1` avait 6 bytes NUL en fin de fichier (écrits par un outil, commités dans WP-0018) → erreur d'exécution « Le terme »» n'est pas reconnu » + `}` orpheline perçu. Réparé (NUL retirés, parse 0 erreur). `assistant.ps1` a **aussi** subi une troncature de fin de fichier en cours de session (fin du menu + dispatch manquant) → réécrit. → **règle : vérifier la FIN des fichiers après toute écriture** (déjà noté, récidive ×2).
+- **`add <nom> relatif`** : ne résolvait que le chemin par rapport au **dossier courant** → échec sur un projet vivant dans une racine (`add 2ndb-toolbox` depuis le kit). Corrigé : cwd **puis** recherche sous chaque racine (PS + bash, testé).
+- **Validation terrain WP-0016/0017 + 0008/0010/0012/0013** : install relancée sur la machine réelle (22:45) → config `.assistant.config` générée avec les vraies valeurs (racines `code\github` = parent du kit → WP-0008 ✓, OP `projet.rtbf.be` + token dans `.env` → WP-0010 ✓), registre vidé, token migré (WP-0017 ✓), `scan` = 23 dossiers / 2 assistés / 14 pourraient / 7 sans signal (WP-0012 ✓), menu de fin + conseil (WP-0013 ✓), `add` via racine (WP-0016 ✓). WP-0011 (« o » accepté) : pas de preuve directe dans cette relance, reste à confirmer au prochain wizard.
+
 ## Notes de design (décisions structurantes)
 
 - **Découpage verrouillé** : **install** (script, 1×, config transversale : env + opencode + racines + connexions) → se termine par **menu natif + conseil** (scan si projets existants, sinon création d'un 1er projet). Le « monde projet » (découverte, adoption, add-ons) = côté **agent** / script natif.

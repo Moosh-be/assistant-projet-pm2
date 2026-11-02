@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-02 (v12 : +WP-0018 renommage de la couche _projet -> _meta, defaut meta_folder)"
+mis_a_jour: "2026-11-02 (v13 : +WP-0019 projet sans code — un repo peut ne contenir que _meta, new -doc)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -35,7 +35,7 @@ mis_a_jour: "2026-11-02 (v12 : +WP-0018 renommage de la couche _projet -> _meta,
 ## 3. État de la phase (couche méta — les WPs sont dans `backlog/`)
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
-| **Lancement** | WP-0001 → 0018 (18) | 11/18 | ☐ RfP |
+| **Lancement** | WP-0001 → 0019 (19) | 11/19 | ☐ RfP |
 | **Planification** | — | 0 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
@@ -45,15 +45,16 @@ mis_a_jour: "2026-11-02 (v12 : +WP-0018 renommage de la couche _projet -> _meta,
 |---|---|---|
 | [WP-0002](backlog/WP-0002-commande-demo.md) — commande démo | a-faire | haute |
 | [WP-0003](backlog/WP-0003-backup-restore-gzip.md) — backup/restore gzip | a-faire | moyenne |
-| [WP-0008](backlog/WP-0008-candidats-racines-parent.md) — wizard : proposer le parent du kit comme racine | **attend validation terrain** | haute |
+| [WP-0008](backlog/WP-0008-candidats-racines-parent.md) — wizard : proposer le parent du kit comme racine | **fait** (validé terrain 02/11) | haute |
 | [WP-0009](backlog/WP-0009-detecteur-projets-multi-signaux.md) — détecteur multi-signaux (spec) | a-faire | moyenne |
-| [WP-0010](backlog/WP-0010-op-token-lien-env.md) — wizard OP : lien clé API + fichier d'env | **attend validation terrain** | moyenne |
+| [WP-0010](backlog/WP-0010-op-token-lien-env.md) — wizard OP : lien clé API + fichier d'env | **fait** (validé terrain 02/11) | moyenne |
 | [WP-0011](backlog/WP-0011-wizard-oui-o.md) — fix wizard : accepter « o » (oui) | **attend validation terrain** | haute |
-| [WP-0012](backlog/WP-0012-scan-liste-projets.md) — /scan : 3 buckets (assistés / pourraient / sans signal) | **attend validation terrain** | haute |
-| [WP-0013](backlog/WP-0013-install-menu-fin.md) — install : menu de fin + conseil | **attend validation terrain** | haute |
+| [WP-0012](backlog/WP-0012-scan-liste-projets.md) — /scan : 3 buckets (assistés / pourraient / sans signal) | **fait** (validé terrain 02/11) | haute |
+| [WP-0013](backlog/WP-0013-install-menu-fin.md) — install : menu de fin + conseil | **fait** (validé terrain 02/11) | haute |
 | [WP-0014](backlog/WP-0014-activation-projet-addons.md) — activation : add-ons pertinents par signaux | a-faire | moyenne |
-| [WP-0016](backlog/WP-0016-assistant-entry-point.md) — entry-point natif assistant.ps1/.sh (scan/statut/new/add sans IA) | **fait** (attend validation terrain) | haute |
-| [WP-0017](backlog/WP-0017-config-machine-env.md) — config machine `.assistant.config` (racine du kit) + secrets `.assistant-projet.env` | **fait** (attend validation terrain) | haute |
+| [WP-0016](backlog/WP-0016-assistant-entry-point.md) — entry-point natif assistant.ps1/.sh (scan/statut/new/add sans IA) | **fait** (validé terrain 02/11) | haute |
+| [WP-0017](backlog/WP-0017-config-machine-env.md) — config machine `.assistant.config` (racine du kit) + secrets `.assistant-projet.env` | **fait** (validé terrain 02/11) | haute |
+| [WP-0019](backlog/WP-0019-projet-sans-code.md) — projet sans code : un repo peut ne contenir que `_meta` (fiche = source de vérité, `new -doc`) | **en-cours** (code fait, tests sandbox verts) | haute |
 
 ## 4. Les plans de gestion envisagés (anti-surcharge)
 | Document | Statut : envisagé / utilisé / ignoré | Pourquoi |
