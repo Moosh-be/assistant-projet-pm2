@@ -6,10 +6,10 @@
 #
 # Principe racines (WP-0005) : pas de « vault » monolithe. Le kit s'appuie sur les
 # RACINES de projets (1..N). Il ne demande JAMAIS de réorganiser des dossiers
-# existants : il les liste, tu valides, et il n'ajoute que manifeste + _projet/.
+# existants : il les liste, tu valides, et il n'ajoute que manifeste + _meta/.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REG_DIR="$ROOT/_projet/registry"
+REG_DIR="$ROOT/_meta/registry"
 OLD_CONN="$REG_DIR/connexions.md"   # bloc wizard ANCIEN (migration WP-0017)
 os="$(uname -s)"
 
@@ -52,7 +52,7 @@ if [ -f "$OLD_CONN" ] && grep -q 'wizard:start' "$OLD_CONN"; then
   fi
   # 2) le registre ne garde que le registre de projet (le bloc wizard → config à la racine,
   #    régénérée plus bas dans cette même installation à partir des réponses)
-  printf '# _projet/registry/connexions.md — registres des connexions DU PROJET (ids sp_project / op_id / MCP)\n# La config machine (racines, connexions transversales) vit dans %s à la racine du kit (WP-0017).\n' "$(basename "$CONFIG")" > "$OLD_CONN"
+  printf '# _meta/registry/connexions.md — registres des connexions DU PROJET (ids sp_project / op_id / MCP)\n# La config machine (racines, connexions transversales) vit dans %s à la racine du kit (WP-0017).\n' "$(basename "$CONFIG")" > "$OLD_CONN"
   echo " Migration : le bloc wizard de l'ancien registre est remplacé par la config à la racine du kit ($CONFIG)."
   echo "             Les réponses de cette installation le remplissent (les anciens choix sont ré-proposés)."
 fi
@@ -293,8 +293,8 @@ cfg_header="# $cfg_name — Config machine de l'espace assistant-projet (WP-0017
 #
 # Les secrets (tokens) ne vivent PAS ici : ils vivent dans le fichier pointé par env_file.
 
-# Dossier de documentation du projet (défaut _projet)
-meta_folder = _projet
+# Dossier de documentation du projet (défaut _meta)
+meta_folder = _meta
 # Fichier des secrets (tokens, etc.)
 env_file = .assistant-projet.env
 "
@@ -343,7 +343,7 @@ echo
 echo " Menu natif (sans IA : rapide, gratuit) :  ./assistant.sh"
 echo "   scan                 tes projets existants : 3 buckets (assistés / pourraient / sans signal) + phase"
 echo "   statut <projet>      où en est un projet (phase + gate + avancement)"
-echo "   new <nom> [racine]   créer un projet (kit + _projet neuf)"
+echo "   new <nom> [racine]   créer un projet (kit + _meta neuf)"
 echo "   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)"
 echo "   commence <nom>       → l'AGENT : ouvre opencode dans le projet"
 echo

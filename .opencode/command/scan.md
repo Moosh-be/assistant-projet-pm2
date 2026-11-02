@@ -26,7 +26,7 @@ Sur le résultat du script :
 
 1. **Assistés** → rien à faire : annoncer la phase + le gate, proposer la reprise (`assistant commence <nom>` — ou « commence le projet <nom> »).
 2. **À compléter** → annoncer ce qui manque (projet.md ou AGENT-projet.md), proposer de compléter via `add`.
-3. **Pourraient** → proposer d'ajouter le kit, **au dossier**, sans déplacer ni réécrire : `assistant add <dossier>`. **Jamais** écraser un fichier pré-existant (le script le garantit et l'affiche) ; si `projet.md` ou `_projet/` existe → le script l'ignore et le signale, l'utilisateur tranche.
+3. **Pourraient** → proposer d'ajouter le kit, **au dossier**, sans déplacer ni réécrire : `assistant add <dossier>`. **Jamais** écraser un fichier pré-existant (le script le garantit et l'affiche) ; si `projet.md` ou `_meta/` existe → le script l'ignore et le signale, l'utilisateur tranche.
 4. **Sans signal** → lister seulement, **ne pas pousser** l'ajout du kit. Le « pourrait » est indicatif : 1 signal ≠ projet certain.
 
 ## 3. Contraintes

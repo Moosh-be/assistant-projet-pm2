@@ -1,4 +1,4 @@
-# _projet/ — le développement du repo lui-même (inception)
+# _meta/ — le développement du repo lui-même (inception)
 
 Ce repo est à la fois un **kit** (templates + protocole pour des projets) et **un projet** (sa propre construction). Ce dossier contient la documentation PM² **du repo vu comme projet** — d'où l'inception : le kit remplit lui-même sa propre documentation.
 

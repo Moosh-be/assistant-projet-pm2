@@ -1,4 +1,4 @@
-# _projet/registry/ — registres
+# _meta/registry/ — registres
 
 - `roles.md` — qui fait quoi sur ce repo (sponsor / bm / cp)
 - `connexions.md` — registres des connexions **du projet** (ids `sp_project` / `op_id` / MCP)

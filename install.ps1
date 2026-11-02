@@ -8,11 +8,11 @@
 #
 # Principe racines (WP-0005) : pas de "vault" monolithe. Le kit s'appuie sur les
 # RACINES de projets (1..N). Il ne demande JAMAIS de reorganiser des dossiers
-# existants : il les liste, tu valides, et il n'ajoute que manifeste + _projet/.
+# existants : il les liste, tu valides, et il n'ajoute que manifeste + _meta/.
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RegDir = Join-Path $Root "_projet/registry"
+$RegDir = Join-Path $Root "_meta/registry"
 $OldConn = Join-Path $RegDir "connexions.md"   # bloc wizard ANCIEN (migration WP-0017)
 
 # --- Config machine (WP-0017) ---------------------------------------------------
@@ -53,7 +53,7 @@ if ((Test-Path $OldConn) -and (Select-String -Path $OldConn -Pattern "wizard:sta
   }
   # 2) le registre ne garde que le registre de projet (la config machine -> fichier a la racine)
   Set-Content -Path $OldConn -Encoding UTF8 -Value @(
-    "# _projet/registry/connexions.md - registres des connexions DU PROJET (ids sp_project / op_id / MCP)",
+    "# _meta/registry/connexions.md - registres des connexions DU PROJET (ids sp_project / op_id / MCP)",
     "# La config machine (racines, connexions transversales) vit dans $(Split-Path $Config -Leaf) a la racine du kit (WP-0017)."
   )
   Write-Host " Migration : le bloc wizard de l'ancien registre est remplace par la config a la racine du kit ($Config)."
@@ -311,8 +311,8 @@ $cfgHeader = @(
   "#",
   "# Les secrets (tokens) ne vivent PAS ici : ils vivent dans le fichier pointe par env_file.",
   "",
-  "# Dossier de documentation du projet (defaut _projet)",
-  "meta_folder = _projet",
+  "# Dossier de documentation du projet (defaut _meta)",
+  "meta_folder = _meta",
   "# Fichier des secrets (tokens, etc.)",
   "env_file = .assistant-projet.env",
   ""
@@ -365,7 +365,7 @@ Write-Host ""
 Write-Host " Menu natif (sans IA : rapide, gratuit) :  .\assistant.ps1"
 Write-Host "   scan                 tes projets existants : 3 buckets (assistes / pourraient / sans signal) + phase"
 Write-Host "   statut <projet>      ou en est un projet (phase + gate + avancement)"
-Write-Host "   new <nom> [racine]   creer un projet (kit + _projet neuf)"
+Write-Host "   new <nom> [racine]   creer un projet (kit + _meta neuf)"
 Write-Host "   add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
 Write-Host "   commence <nom>       -> l'AGENT : ouvre opencode dans le projet"
 Write-Host ""

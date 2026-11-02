@@ -21,7 +21,7 @@
 2. The native menu (no AI : fast, free) :  assistant.ps1 (Windows) · assistant.sh (macOS/Linux)
      scan               → your existing projects : list in 3 buckets (assisted / could be / no signal)
      statut <project>   → where a project stands (phase + gate + progress)
-     new <name>         → create a project (kit + fresh _projet)
+     new <name>         → create a project (kit + fresh _meta)
      add <folder>       → add the kit to an existing project (never overwrites)
      commence <name>    → THE AGENT : opens opencode in the project (driving, mode B/C)
 3. In the agent (opencode) :
@@ -50,19 +50,19 @@ projet.md              ← project sheet / master file (machine frontmatter + ph
 checklists/            ← per gate (RfP/RfE/RfC) and per role (sponsor/BM/CP)
 tools/                 ← gen_templates.py (regenerate the artefact skeletons)
 docs/                  ← onboarding + install (hammer / vault)
-_projet/               ← INCEPTION : the repo developed as its own PM² project
+_meta/               ← INCEPTION : the repo developed as its own PM² project
                          (fiche.md + backlog/ 1 file = 1 work package → exportable
                          to SuperProductivity / OpenProject, logs/, report/, registry/)
 ```
 > `_` prefix = "meta" artefact of the repo, not a PM² phase folder.
 > ⚠️ **Naming rule** : the AI routing note is deliberately named `AGENT-projet.md`, **never `AGENTS.md`** — in agent-tool ecosystems an `AGENTS.md` is auto-loaded and would hijack whatever global context you have. The skill/protocol reads `AGENT-projet.md` explicitly.
 
-## The inception layer (`_projet/`)
-> ⭐ **This kit uses itself** (inception). In `_projet/` you find **exactly what happens when the assistant is used on a project** : the sheet, the backlog (1 file = 1 work package), the session journal, the registries. The kit filling its own documentation — a real example, not a mockup.
+## The inception layer (`_meta/`)
+> ⭐ **This kit uses itself** (inception). In `_meta/` you find **exactly what happens when the assistant is used on a project** : the sheet, the backlog (1 file = 1 work package), the session journal, the registries. The kit filling its own documentation — a real example, not a mockup.
 
-`_projet/` holds the state of the repo as a project:
+`_meta/` holds the state of the repo as a project:
 - `fiche.md` — project sheet of the repo (frontmatter = truth for the meta layer)
-- `backlog/` — **1 file = 1 work package** (universal frontmatter, transformable into a ticket — see `_projet/backlog/README.md`)
+- `backlog/` — **1 file = 1 work package** (universal frontmatter, transformable into a ticket — see `_meta/backlog/README.md`)
 - `logs/` · `report/` · `registry/` — session journal, periodic reports, registers
 
 ## The 3 feeding modes
@@ -80,7 +80,7 @@ _projet/               ← INCEPTION : the repo developed as its own PM² projec
 **Currently implemented** :
 - **SuperProductivity** : 1 work package = 1 task (tag `pm2`, `sp_id` frontmatter)
 - **OpenProject** : artefacts = documents to import ; WPS = work packages (later: MCP read/write)
-- **GitHub Issues / GitLab Issues** : backlog WPs (`_projet/backlog/`, 1 file = 1 WP) are transformable into tickets (`op_id` / `sp_id` frontmatter)
+- **GitHub Issues / GitLab Issues** : backlog WPs (`_meta/backlog/`, 1 file = 1 WP) are transformable into tickets (`op_id` / `sp_id` frontmatter)
 
 **Connection ideas (not implemented)** — suggest them in the issue:
 - **Notion** : PM² artefacts (sheets, minutes, reports) as Notion pages for a non-Obsidian team

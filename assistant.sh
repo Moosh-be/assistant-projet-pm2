@@ -7,7 +7,7 @@
 # Usage : ./assistant.sh <cmd> [args]      (Windows : .\assistant.ps1 <cmd> [args])
 #   scan               liste les projets des racines (assistés / pourraient / sans signal)
 #   statut <projet>    phase + gate + avancement d'un projet
-#   new <nom> [racine] crée un projet (copie du kit + _projet neuf)
+#   new <nom> [racine] crée un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit à un projet existant (jamais d'écrasement)
 #   commence <nom>     → l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
@@ -15,7 +15,7 @@
 # La logique de scan/statut vit ICI (source unique) : les commandes opencode /scan /statut l'appellent.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REG_DIR="$ROOT/_projet/registry"
+REG_DIR="$ROOT/_meta/registry"
 OLD_CONN="$REG_DIR/connexions.md"   # registre ANCIEN (fallback de transition)
 
 # Config machine à la racine du kit (WP-0017) : 1er des 3 noms qui existe.
@@ -24,14 +24,14 @@ for c in .assistant.config assistant.config assistant.config.md; do
   [ -f "$ROOT/$c" ] && { CONFIG="$ROOT/$c"; break; }
 done
 
-# Nom du dossier méta (défaut _projet) — lu de la config s'il existe.
+# Nom du dossier méta (défaut _meta) — lu de la config s'il existe.
 get_meta_folder() {
   if [ -n "$CONFIG" ] && [ -f "$CONFIG" ]; then
     local v
     v="$(grep -m1 '^[[:space:]]*meta_folder[[:space:]]*=' "$CONFIG" 2>/dev/null | sed -E 's/^[[:space:]]*meta_folder[[:space:]]*=[[:space:]]*//' | sed 's/[[:space:]]*$//')"
     [ -n "$v" ] && { printf '%s' "$v"; return; }
   fi
-  printf '_projet'
+  printf '_meta'
 }
 META="$(get_meta_folder)"
 
@@ -77,7 +77,7 @@ find_project() { # find_project <nom> → chemin du projet (projet.md présent) 
 
 # Copie du kit dans $target. $nom = nom du projet. $skipfile = fichier de sortie (liste des ignorés).
 # (un fichier et pas une variable : copy_kit est appelé via $(...) = sous-shell, les variables globales y sont perdues)
-# Ne copie JAMAIS les données d'inception du kit (_projet/fiche.md du kit, backlog/WP-*, logs/*, registry local).
+# Ne copie JAMAIS les données d'inception du kit (_meta/fiche.md du kit, backlog/WP-*, logs/*, registry local).
 # Jamais d'écrasement : un fichier/dossier pré-existant est signalé et ignoré.
 copy_kit() {
   local target="$1" nom="$2" skipfile="$3"
@@ -132,7 +132,7 @@ copy_kit() {
     copied=$((copied+1))
   fi
 
-  # 5) dossier méta NEUF (pas celui du kit) — nom = $META (défaut _projet, lu de la config)
+  # 5) dossier méta NEUF (pas celui du kit) — nom = $META (défaut _meta, lu de la config)
   local meta="$META"
   if [ -e "$target/$meta" ]; then
     skipped+=("$meta/ (pré-existant, non touché)")
@@ -327,7 +327,7 @@ show_menu() {
 ================================================
   scan                 les projets des racines : assistés / pourraient / sans signal
   statut <projet>      phase + gate + avancement
-  new <nom> [racine]   créer un projet (kit + _projet neuf)
+  new <nom> [racine]   créer un projet (kit + _meta neuf)
   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
 ------------------------------------------------
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)

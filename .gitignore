@@ -18,4 +18,4 @@ __pycache__/
 assistant.config
 assistant.config.md
 .assistant-projet.env
-_projet/registry/connexions.md
+_meta/registry/connexions.md

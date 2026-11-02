@@ -6,7 +6,7 @@
 # Usage : .\assistant.ps1 <cmd> [args]      (macOS/Linux : ./assistant.sh <cmd> [args])
 #   scan               liste les projets des racines (assistes / pourraient / sans signal)
 #   statut <projet>    phase + gate + avancement d'un projet
-#   new <nom> [racine] cree un projet (copie du kit + _projet neuf)
+#   new <nom> [racine] cree un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit a un projet existant (jamais d'ecrasement)
 #   commence <nom>     -> l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 # PSScriptRoot (et pas $MyInvocation.MyCommand.Path) : robuste quel que soit le mode d'appel
 # (-File, & depuis un autre script, dot-sourcing). = le dossier qui contient ce script.
 $Root = $PSScriptRoot
-$RegDir = Join-Path $Root "_projet/registry"
+$RegDir = Join-Path $Root "_meta/registry"
 $OldConn = Join-Path $RegDir "connexions.md"   # registre ANCIEN (fallback de transition)
 
 # Config machine a la racine du kit (WP-0017) : 1er des 3 noms qui existe.
@@ -27,7 +27,7 @@ foreach ($cn in @(".assistant.config", "assistant.config", "assistant.config.md"
   if (Test-Path (Join-Path $Root $cn)) { $Config = Join-Path $Root $cn; break }
 }
 
-# Nom du dossier meta (defaut _projet) - lu de la config s'il existe.
+# Nom du dossier meta (defaut _meta) - lu de la config s'il existe.
 function Get-MetaFolder {
   if ($null -ne $Config -and (Test-Path $Config)) {
     foreach ($l in (Get-Content $Config -Encoding UTF8)) {
@@ -37,7 +37,7 @@ function Get-MetaFolder {
       }
     }
   }
-  return "_projet"
+  return "_meta"
 }
 $MetaFolder = Get-MetaFolder
 
@@ -100,7 +100,7 @@ function Find-Project([string]$name) {
 }
 
 # Copie du kit dans $target. $nom = nom du projet (pour pre-remplir projet.md + fiche).
-# Ne copie JAMAIS les donnees d'inception du kit (_projet/fiche.md du kit, backlog/WP-*, logs/*, registry local).
+# Ne copie JAMAIS les donnees d'inception du kit (_meta/fiche.md du kit, backlog/WP-*, logs/*, registry local).
 # Jamais d'ecrasement : un fichier/dossier pre-existant est signale et ignore.
 function Copy-Kit([string]$target, [string]$nom) {
   $date = Get-Date -Format "yyyy-MM-dd"
@@ -159,7 +159,7 @@ function Copy-Kit([string]$target, [string]$nom) {
     $copied += 1
   }
 
-  # 5) dossier meta NEUF (pas celui du kit) - nom = meta_folder (defaut _projet)
+  # 5) dossier meta NEUF (pas celui du kit) - nom = meta_folder (defaut _meta)
   $proj = Join-Path $target $MetaFolder
   if (Test-Path $proj) {
     $skipped += "$MetaFolder/ (pre-existant, non touche)"
@@ -332,7 +332,7 @@ function Show-Menu {
   Write-Host "================================================"
   Write-Host "  scan                 les projets des racines : assistes / pourraient / sans signal"
   Write-Host "  statut <projet>      phase + gate + avancement"
-  Write-Host "  new <nom> [racine]   creer un projet (kit + _projet neuf)"
+  Write-Host "  new <nom> [racine]   creer un projet (kit + _meta neuf)"
   Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
   Write-Host "------------------------------------------------"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"

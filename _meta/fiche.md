@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-02 (v11 : +WP-0017 config machine .assistant.config + secrets .assistant-projet.env)"
+mis_a_jour: "2026-11-02 (v12 : +WP-0018 renommage de la couche _projet -> _meta, defaut meta_folder)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -35,7 +35,7 @@ mis_a_jour: "2026-11-02 (v11 : +WP-0017 config machine .assistant.config + secre
 ## 3. État de la phase (couche méta — les WPs sont dans `backlog/`)
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
-| **Lancement** | WP-0001 → 0017 (17) | 10/17 | ☐ RfP |
+| **Lancement** | WP-0001 → 0018 (18) | 11/18 | ☐ RfP |
 | **Planification** | — | 0 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |

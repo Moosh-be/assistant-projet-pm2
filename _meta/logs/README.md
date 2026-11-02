@@ -1,4 +1,4 @@
-# _projet/logs/ — journal des sessions
+# _meta/logs/ — journal des sessions
 
 1 fichier par session significative de développement du repo : `AAAA-MM-JJ-<slug>.md` (ex. `2026-10-26-couche-projet.md`).
 

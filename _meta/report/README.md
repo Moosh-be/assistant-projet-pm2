@@ -1,4 +1,4 @@
-# _projet/report/ — états périodiques
+# _meta/report/ — états périodiques
 
 1 fichier par report : `report-AAAA-MM.md` (périodique) ou `report-<gate>.md` (ex. `report-RfP.md`).
 

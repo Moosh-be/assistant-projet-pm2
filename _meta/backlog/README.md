@@ -1,4 +1,4 @@
-# _projet/backlog/ — 1 fichier = 1 package de travail (WP)
+# _meta/backlog/ — 1 fichier = 1 package de travail (WP)
 
 Chaque WP est un fichier Markdown : **frontmatter YAML = la partie « ticket »** (machine, transformable), **corps = la description lisible** (humain / Obsidian).
 

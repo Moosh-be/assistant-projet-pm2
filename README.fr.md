@@ -21,7 +21,7 @@
 2. Le menu natif (sans IA : rapide, gratuit) :  assistant.ps1 (Windows) · assistant.sh (macOS/Linux)
      scan               → tes projets existants : liste en 3 buckets (assistés / pourraient / sans signal)
      statut <projet>    → où en est un projet (phase + gate + avancement)
-     new <nom>          → créer un projet (kit + _projet neuf)
+     new <nom>          → créer un projet (kit + _meta neuf)
      add <dossier>      → ajouter le kit à un projet existant (jamais d'écrasement)
      commence <nom>     → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
 3. Dans l'agent (opencode) :
@@ -50,19 +50,19 @@ projet.md              ← fiche projet / fichier maître (frontmatter machine +
 checklists/            ← par gate (RfP/RfE/RfC) et par rôle (sponsor/BM/CP)
 tools/                 ← gen_templates.py (régénère les squelettes d'artefacts)
 docs/                  ← prise en main + installation (marteau / coffre)
-_projet/               ← INCEPTION : le repo mené comme son propre projet PM²
+_meta/               ← INCEPTION : le repo mené comme son propre projet PM²
                          (fiche.md + backlog/ 1 fichier = 1 WP → exportable
                          vers SuperProductivity / OpenProject, logs/, report/, registry/)
 ```
 > Préfixe `_` = artefact « méta » du repo, pas un dossier de phase PM².
 > ⚠️ **Règle de nom** : la note de routage IA s'appelle délibérément `AGENT-projet.md`, **jamais `AGENTS.md`** — dans les écosystèmes d'outils agent, un `AGENTS.md` est auto-chargé et capturerait tout ton contexte global. Le skill/protocole lit `AGENT-projet.md` explicitement.
 
-## La couche inception (`_projet/`)
-> ⭐ **Ce kit s'utilise lui-même** (inception). Dans `_projet/` vous retrouvez **exactement ce qui se passe quand on utilise l'assistant sur un projet** : la fiche, le backlog (1 fichier = 1 WP), le journal des sessions, les registres. C'est le kit qui remplit sa propre documentation — un exemple réel, pas une maquette.
+## La couche inception (`_meta/`)
+> ⭐ **Ce kit s'utilise lui-même** (inception). Dans `_meta/` vous retrouvez **exactement ce qui se passe quand on utilise l'assistant sur un projet** : la fiche, le backlog (1 fichier = 1 WP), le journal des sessions, les registres. C'est le kit qui remplit sa propre documentation — un exemple réel, pas une maquette.
 
-`_projet/` tient l'état du repo vu comme projet :
+`_meta/` tient l'état du repo vu comme projet :
 - `fiche.md` — fiche du repo (frontmatter = vérité pour la couche méta)
-- `backlog/` — **1 fichier = 1 package de travail** (frontmatter universel, transformable en ticket — voir `_projet/backlog/README.md`)
+- `backlog/` — **1 fichier = 1 package de travail** (frontmatter universel, transformable en ticket — voir `_meta/backlog/README.md`)
 - `logs/` · `report/` · `registry/` — journal de session, rapports périodiques, registres
 
 ## Les 3 modes d'alimentation
@@ -80,7 +80,7 @@ _projet/               ← INCEPTION : le repo mené comme son propre projet PM�
 **Actuellement implémentées** :
 - **SuperProductivity** : 1 WP = 1 tâche (tag `pm2`, frontmatter `sp_id`)
 - **OpenProject** : artefacts = docs à importer ; WPS = packages de travail (plus tard : lecture/écriture MCP)
-- **GitHub Issues / GitLab Issues** : les WPs du backlog (`_projet/backlog/`, 1 fichier = 1 WP) sont transformables en tickets (`op_id` / `sp_id` en frontmatter)
+- **GitHub Issues / GitLab Issues** : les WPs du backlog (`_meta/backlog/`, 1 fichier = 1 WP) sont transformables en tickets (`op_id` / `sp_id` en frontmatter)
 
 **Idées de connexions (non implémentées)** — à proposer dans l'issue :
 - **Notion** : les artefacts PM² (fiches, PV, rapports) en pages Notion pour une équipe non-Obsidian
