@@ -11,7 +11,11 @@ desktop.ini
 __pycache__/
 *.pyc
 
-# État local machine — généré par install.ps1 / install.sh.
-# Contient les chemins/instances de la MACHINE de l'utilisateur (jamais de données entreprise).
-# Comme un .env : reste local, ne part pas sur la forge.
+# État local machine + secrets — générés par install.ps1 / install.sh (WP-0017).
+# Contiennent les chemins/instances/SECRETS de la MACHINE de l'utilisateur (jamais de données entreprise).
+# Comme un .env : restent locaux, ne partent pas sur la forge.
+.assistant.config
+assistant.config
+assistant.config.md
+.assistant-projet.env
 _projet/registry/connexions.md
