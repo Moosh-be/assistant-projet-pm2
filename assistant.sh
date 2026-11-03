@@ -342,6 +342,11 @@ cmd_add() {
   echo "  $copied éléments copiés, ${nsk:-0} ignorés."
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
+  echo ""
+  echo "  Prochain pas : aller dans le projet et lancer l'AGENT la-bas (le kit vient d'y être copié) :"
+  echo "    cd $target"
+  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase → propose le prochain artefact)"
+  echo "  (ou, d'ici même : assistant commence $(basename "$target"))"
 }
 
 cmd_commence() {

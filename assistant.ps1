@@ -359,6 +359,12 @@ function Cmd-Add([string]$path) {
   Write-Host "Kit ajoute : $target"
   Write-Host ("  {0} elements copies, {1} ignores." -f $res.Copied, $res.Skipped.Count)
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
+  $leaf = Split-Path $target -Leaf
+  Write-Host ""
+  Write-Host "  Prochain pas : aller dans le projet et lancer l'AGENT la-bas (le kit vient d'y etre copie) :"
+  Write-Host "    cd $target"
+  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase -> propose le prochain artefact)"
+  Write-Host "  (ou, d'ici meme : assistant commence $leaf)"
 }
 
 function Cmd-Commence([string]$name) {
