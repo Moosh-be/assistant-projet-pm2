@@ -119,7 +119,7 @@ function Copy-Kit([string]$target, [string]$nom) {
   $skipped = @()
 
   # 1) Fichiers racine du kit (generiques)
-  foreach ($f in @("AGENT-projet.md","referentiel-templates-PM2.md","opencode.json",".gitignore")) {
+  foreach ($f in @("AGENT-projet.md","referentiel-templates-PM2.md","opencode.json",".gitignore","assistant.ps1","assistant.sh")) {
     if (Test-Path (Join-Path $Root $f)) {
       if (Test-Path (Join-Path $target $f)) { $skipped += $f }
       else { Copy-Item (Join-Path $Root $f) (Join-Path $target $f); $copied++ }
@@ -265,11 +265,16 @@ function Cmd-Scan {
 }
 
 function Cmd-Statut([string]$name) {
-  if ([string]::IsNullOrWhiteSpace($name)) { Write-Host "Usage : assistant statut <projet>"; return }
-  $p = Find-Project $name
-  if ($null -eq $p) {
-    Write-Host "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
-    return
+  # Sans argument : le projet du DOSSIER COURANT (si c'en est un) - pour le /statut depuis le projet.
+  if ([string]::IsNullOrWhiteSpace($name)) {
+    if (Test-ProjectDir (Get-Location).Path) { $p = (Get-Location).Path }
+    else { Write-Host "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return }
+  } else {
+    $p = Find-Project $name
+    if ($null -eq $p) {
+      Write-Host "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
+      return
+    }
   }
   # Source de verite : projet.md sinon _meta/fiche.md (projet sans code - WP-0019).
   $mf = (Get-MetaFolder)
@@ -324,7 +329,9 @@ function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
     Write-Host ("  {0}/ a l etat (fiche + squelette) - le repo ne contient que la couche meta." -f $MetaFolder)
     Write-Host ""
     Write-Host "  Plus tard, si le kit complet est utile : assistant add <nom>  (zero ecrasement, $MetaFolder conserve)"
-    Write-Host "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+    Write-Host "  Prochain pas :"
+    Write-Host "    avec l'agent : assistant add <nom>  puis  cd $target  +  opencode  (test : il annonce la phase)"
+    Write-Host "    sans l'agent : ouvrir $MetaFolder/fiche.md et travailler le markdown directement"
     return
   }
   New-Item -ItemType Directory -Force -Path $target | Out-Null
@@ -334,7 +341,11 @@ function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
   Write-Host ("  {0} elements copies, {1} ignores." -f $res.Copied, $res.Skipped.Count)
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
   Write-Host ""
-  Write-Host "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+  Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
+  Write-Host "    cd $target"
+  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
+  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  Write-Host "  (ou, sans ouvrir opencode : assistant commence $name)"
 }
 
 function Cmd-Add([string]$path) {
@@ -361,10 +372,11 @@ function Cmd-Add([string]$path) {
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
   $leaf = Split-Path $target -Leaf
   Write-Host ""
-  Write-Host "  Prochain pas : aller dans le projet et lancer l'AGENT la-bas (le kit vient d'y etre copie) :"
+  Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
-  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase -> propose le prochain artefact)"
-  Write-Host "  (ou, d'ici meme : assistant commence $leaf)"
+  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
+  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  Write-Host "  (ou, sans ouvrir opencode : assistant commence $leaf)"
 }
 
 function Cmd-Commence([string]$name) {

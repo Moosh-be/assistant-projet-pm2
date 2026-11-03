@@ -87,7 +87,7 @@ copy_kit() {
 
   # 1) Fichiers racine du kit (génériques)
   local f
-  for f in AGENT-projet.md referentiel-templates-PM2.md opencode.json .gitignore; do
+  for f in AGENT-projet.md referentiel-templates-PM2.md opencode.json .gitignore assistant.ps1 assistant.sh; do
     if [ -e "$ROOT/$f" ]; then
       if [ -e "$target/$f" ]; then skipped+=("$f")
       else cp "$ROOT/$f" "$target/$f"; copied=$((copied+1)); fi
@@ -245,11 +245,17 @@ cmd_scan() {
 
 cmd_statut() {
   local name="$1"
-  if [ -z "$name" ]; then echo "Usage : assistant statut <projet>"; return; fi
-  local p; p="$(find_project "$name")"
-  if [ -z "$p" ]; then
-    echo "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
-    return
+  local p=""
+  if [ -z "$name" ]; then
+    # Sans argument : le projet du dossier courant (si c'en est un) — pour le /statut depuis le projet.
+    if [ -f "$(pwd)/projet.md" ] || [ -f "$(pwd)/$META/fiche.md" ]; then p="$(pwd)"
+    else echo "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return; fi
+  else
+    p="$(find_project "$name")"
+    if [ -z "$p" ]; then
+      echo "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
+      return
+    fi
   fi
   # Source de vérité : projet.md sinon <meta>/fiche.md (projet sans code — WP-0019).
   local src="$p/projet.md"
@@ -302,7 +308,9 @@ cmd_new() {
     echo ""; echo "Projet documentaire créé (sans kit) : $target"
     echo "  $META/ à l'état (fiche + squelette) — le repo ne contient que la couche méta."
     echo ""; echo "  Plus tard, si le kit complet est utile : assistant add <nom>  (zéro écrasement, $META conservé)"
-    echo "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+    echo "  Prochain pas :"
+    echo "    avec l'agent : assistant add <nom>  puis  cd $target  +  opencode  (test : il annonce la phase)"
+    echo "    sans l'agent : ouvrir $META/fiche.md et travailler le markdown directement"
     return
   fi
   mkdir -p "$target"
@@ -314,7 +322,12 @@ cmd_new() {
   echo "  $copied éléments copiés, ${nsk:-0} ignorés."
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
-  echo ""; echo "  Prochain pas : assistant commence ${name}   (l'agent prend le relais, phase Lancement)"
+  echo ""
+  echo "  Prochain pas : aller dans le projet et lancer l'agent :"
+  echo "    cd $target"
+  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
+  echo "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  (ou, sans ouvrir opencode : assistant commence ${name})"
 }
 
 cmd_add() {
@@ -343,10 +356,11 @@ cmd_add() {
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
   echo ""
-  echo "  Prochain pas : aller dans le projet et lancer l'AGENT la-bas (le kit vient d'y être copié) :"
+  echo "  Prochain pas : aller dans le projet et lancer l'agent :"
   echo "    cd $target"
-  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase → propose le prochain artefact)"
-  echo "  (ou, d'ici même : assistant commence $(basename "$target"))"
+  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
+  echo "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  (ou, sans ouvrir opencode : assistant commence $(basename "$target"))"
 }
 
 cmd_commence() {

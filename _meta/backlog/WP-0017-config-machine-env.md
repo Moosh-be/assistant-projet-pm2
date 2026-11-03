@@ -1,4 +1,4 @@
-﻿---
+---
 wp_id: WP-0017
 titre: "Config machine Ã  la racine (.assistant.config) + gÃ©nÃ©ration du .env secrets par le wizard"
 statut: fait
@@ -79,4 +79,4 @@ gitlab_url = <url>
 
 - `new`/`add` ne copient **ni** la config **ni** le `.env` dans les projets (config **machine**, locale au kit â€” mÃªme principe que le `connexions.md` local d'avant).
 - Le `.env` est **dÃ©diÃ© au kit** (`.assistant-projet.env`) : aucun autre outil ne le touche ; les outils tiers (op, MCPâ€¦) chargent la variable `OP_API_TOKEN` depuis ce fichier (chemin connu via la config).
-- Ouvert (hors pÃ©rimÃ¨tre ici) : un projet utilise le kit via le `.opencode/` copiÃ© â€” si on lance `/scan` **depuis un projet**, le script vit dans le kit (Ã  chercher Ã  proximitÃ©) ; Ã  trancher dans WP-0014/Ã  venir.
+- Ouvert (résolu le 03/11) : un projet utilise le kit via le `.opencode/` copié — si on lance `/scan` **depuis un projet**, le script vit dans le kit (à chercher à proximité) ; à trancher dans WP-0014/à venir. → **Tranché** : les scripts `assistant.ps1`/`.sh` sont **copiés dans chaque projet** par `new`/`add` (le projet est autonome, `statut` sans argument = projet du dossier courant) — voir log 2026-11-03.

@@ -12,7 +12,7 @@ Donne le statut du projet selon le protocole d'ouverture de session d'`AGENT-pro
 - Windows : `powershell -NoProfile -ExecutionPolicy Bypass -File .\assistant.ps1 statut $ARGUMENTS`
 - macOS / Linux : `./assistant.sh statut $ARGUMENTS`
 
-(sans argument : le script demande le nom du projet → demander à l'utilisateur sur quel projet on est ; si le dossier courant est un projet, passer son nom.)
+(Sans argument : le script prend **le projet du dossier courant** — c'est le cas normal : la commande est lancée DEPUIS le projet. L'appeler avec un nom cherche dans le kit, le dossier courant et les racines.)
 
 → le script affiche : **phase + gate suivant**, **rôles** (sponsor / bm / cp / moe), **tickets** (ids SP / OP), le **tableau d'avancement** (artefacts dus / faits par phase).
 
