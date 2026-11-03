@@ -52,3 +52,32 @@ Variante `-doc` (pas de kit = pas d'agent) :
 - WP-0019 : code fait + tests sandbox ; **reste** : `new -doc` en terrain réel.
 - Nouveau : le projet `2ndb-toolbox` a le kit (14 éléments + scripts) → test suivant de l'utilisateur :
   `cd 2ndb-toolbox` + `opencode` → l'agent doit annoncer **phase Lancement, gate RfP** ; puis `/statut`.
+
+## + Commande `update` (WP-0020) — demande : « je suis dans le rep du projet, je devrais pouvoir lancer cet update sans retourner dans le repo qui gère les projets »
+
+Le kit va évoluer ; un projet ne doit pas revenir au repo du kit pour se mettre à jour :
+
+- **`assistant update`** se lance **depuis le projet** (dossier courant).
+- Origine du kit = ligne `kit_source: <chemin>` dans `_meta/registry/connexions.md`, **écrite
+  automatiquement** par `new`/`add` au copy.
+- **Resync zéro écrasement** : seuls les fichiers du kit **manquants** sont ajoutés (racine générique —
+  jamais `.gitignore` — + `0*`/`checklists`/`docs`/`tools` recursif + `.opencode/agent|command` recursif).
+  Le 2ᵉ run = « Déjà à jour ». Un fichier déjà présent côté projet n'est **jamais** modifié.
+- Cas d'erreur : pas dans un projet / pas de `kit_source` (message + la ligne à ajouter) / kit invalide.
+- **Limite v1 assumée** : `update` **ajoute** des fichiers, il ne met pas à jour le **contenu** d'un
+  fichier existant (pas de diff/merge — zéro écrasement = règle absolue).
+
+### Tests sandbox (PS + bash, tous verts)
+
+`new` → modification du kit (`docs/nouveau.md` + `AGENT-projet.md` modifié) → `update` depuis le projet :
+`docs/nouveau.md` ajouté, `AGENT-projet.md` **non** écrasé (reste la version projet) → 2ᵉ run « Déjà à jour »
+→ 3 cas d'erreur OK. Syntaxe : parse PS 0 erreur (0 byte non-ASCII, 0 NUL — guillemets `« »` remplacés
+par `'` dans les 2 notes « Prochain pas »), `bash -n` OK.
+
+### Incident (troncation n°3)
+
+L'insertion de `update_kit`/`cmd_update` par l'edit tool a **tronqué** `assistant.sh` à la ligne 439
+(milieu de `cmd_add`). Reconstruction byte-level : `git checkout HEAD -- assistant.sh` + script `.ps1` en
+Temp (4 insertions par ancres, échappement apostrophe PS = `''`). Leçon : pour les grosses modifs de
+script, préférer `git checkout HEAD --` + reconstruction scriptée plutôt que l'edit tool.
+

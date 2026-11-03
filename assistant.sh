@@ -143,7 +143,7 @@ copy_kit() {
       "$ROOT/tools/templates/fiche-projet.md" > "$target/$meta/fiche.md"
     [ -f "$ROOT/$meta/backlog/README.md" ] && cp "$ROOT/$meta/backlog/README.md" "$target/$meta/backlog/README.md"
     [ -f "$ROOT/$meta/registry/README.md" ] && cp "$ROOT/$meta/registry/README.md" "$target/$meta/registry/README.md"
-    printf '# registry/connexions.md - registres des connexions du projet\n' > "$target/$meta/registry/connexions.md"
+    printf '# registry/connexions.md - registres des connexions du projet\nkit_source: %s\n' "$ROOT" > "$target/$meta/registry/connexions.md"
     : > "$target/$meta/logs/.gitkeep"
     : > "$target/$meta/report/.gitkeep"
     copied=$((copied+1))
@@ -154,6 +154,99 @@ copy_kit() {
 }
 
 # ── Commandes ───────────────────────────────────────────────────────────────
+# Resync des fichiers GÉNÉRIQUES du kit vers le projet (zéro écrasement :
+# seuls les fichiers ABSENTS du projet sont copiés, y compris dans les dossiers existants).
+# update_kit <projet> <kit> → un chemin ajouté par ligne (relatif au projet)
+update_kit() {
+  local target="$1" kit="$2"
+  local f src dst rel mdir
+  # 1) Fichiers racine génériques (JAMAIS .gitignore = data du projet)
+  for f in AGENT-projet.md referentiel-templates-PM2.md opencode.json assistant.ps1 assistant.sh; do
+    src="$kit/$f"; dst="$target/$f"
+    if [ -f "$src" ] && [ ! -e "$dst" ]; then cp "$src" "$dst"; printf '%s\n' "$f"; fi
+  done
+  # 2) Dossiers de phases + checklists + docs + tools : les fichiers manquants (recursif)
+  local d
+  for d in "$kit"/*; do
+    [ -d "$d" ] || continue
+    local base; base="$(basename "$d")"
+    case "$base" in
+      0*|checklists|docs|tools) ;;
+      *) continue ;;
+    esac
+    dst="$target/$base"
+    if [ ! -d "$dst" ]; then
+      cp -R "$d" "$dst"
+      printf '%s/\n' "$base"
+      continue
+    fi
+    local sl="${d%/}"
+    find "$d" -type f | while IFS= read -r m; do
+      rel="${m#"$sl"/}"
+      if [ ! -e "$dst/$rel" ]; then
+        mdir="$(dirname "$dst/$rel")"
+        mkdir -p "$mdir"
+        cp "$m" "$dst/$rel"
+        printf '%s/%s\n' "$base" "$rel"
+      fi
+    done
+  done
+  # 3) .opencode/agent + command (fichiers manquants, recursif)
+  local sub
+  for sub in agent command; do
+    src="$kit/.opencode/$sub"
+    [ -d "$src" ] || continue
+    dst="$target/.opencode/$sub"
+    mkdir -p "$dst"
+    local sl="${src%/}"
+    find "$src" -type f | while IFS= read -r m; do
+      rel="${m#"$sl"/}"
+      if [ ! -e "$dst/$rel" ]; then
+        mdir="$(dirname "$dst/$rel")"
+        mkdir -p "$mdir"
+        cp "$m" "$dst/$rel"
+        printf '.opencode/%s/%s\n' "$sub" "$rel"
+      fi
+    done
+  done
+  return 0
+}
+
+# cmd_update : resync du kit, lance DEPUIS le projet (dossier courant).
+cmd_update() {
+  local p; p="$(pwd)"
+  if [ ! -f "$p/projet.md" ] && [ ! -f "$p/$META/fiche.md" ]; then
+    echo "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet — avec projet.md ou $META/)."
+    return
+  fi
+  # Origine du kit : ligne 'kit_source: <chemin>' dans <meta>/registry/connexions.md
+  local reg="$p/$META/registry/connexions.md"
+  local kit_src=""
+  if [ -f "$reg" ]; then
+    kit_src="$(grep -m1 -E '^[[:space:]]*kit_source:' "$reg" | sed -E 's/^[[:space:]]*kit_source:[[:space:]]*//')"
+  fi
+  if [ -z "$kit_src" ]; then
+    echo "Pas de 'kit_source' dans $reg — je ne sais pas d'où vient le kit."
+    echo "  Ajoute la ligne : kit_source: <chemin du kit>"
+    return
+  fi
+  if [ ! -f "$kit_src/assistant.ps1" ]; then
+    echo "Kit source introuvable ou invalide : $kit_src"
+    return
+  fi
+  echo ""; echo "Update du kit depuis : $kit_src"
+  echo "  (zéro écrasement : seuls les fichiers du kit manquants sont ajoutés)"
+  local added; added="$(update_kit "$p" "$kit_src")"
+  if [ -z "$added" ]; then
+    echo "  Déjà à jour — rien à ajouter."
+  else
+    local n; n="$(printf '%s\n' "$added" | grep -c .)"
+    echo "  $n éléments ajoutés :"
+    printf '%s\n' "$added" | while IFS= read -r a; do [ -n "$a" ] && echo "    + $a"; done
+  fi
+  echo ""
+}
+
 cmd_scan() {
   local roots
   roots="$(get_racines)"
@@ -387,6 +480,7 @@ show_menu() {
   statut <projet>      phase + gate + avancement (lit projet.md ou _meta/fiche.md)
   new <nom> [racine] [-doc]   créer un projet  (-doc = SEUL _meta, sans kit : projet sans code)
   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
+  update               (depuis un projet) resync les fichiers génériques du kit (zéro écrasement)
 ------------------------------------------------
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
   install.sh           (re)initialiser la config transversale (racines, connexions)
@@ -410,6 +504,7 @@ case "$c" in
     done
     cmd_new "$nname" "$nroot" "$ndoc" ;;
   add) cmd_add "${2:-}" ;;
+  update) cmd_update ;;
   commence) cmd_commence "${2:-}" ;;
   menu|"\?") show_menu ;;
   *) echo "Commande inconnue : "; show_menu ;;

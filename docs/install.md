@@ -44,6 +44,7 @@
 | `statut <projet>` | déterministe | phase + gate + rôles + tickets + tableau d'avancement |
 | `new <nom> [racine] [-doc]` | déterministe | crée un projet (kit + `_meta/` neuf, `projet.md` pré-rempli) · **`-doc`** = projet sans code : seul `_meta/` est créé (fiche + squelette), le kit n'est pas copié — à compléter plus tard avec `add` |
 | `add <dossier>` | déterministe | ajoute le kit à un projet existant — **jamais d'écrasement** (le pré-existant est signalé et ignoré) |
+| `update` *(depuis un projet)* | déterministe | resync les fichiers génériques du kit (WP-0020) : seuls les fichiers **manquants** du kit sont ajoutés — le contenu côté projet est sacré. Origine du kit = `kit_source` (écrite par `new`/`add` dans `_meta/registry/connexions.md`) |
 | `commence <nom>` | handoff IA | ouvre opencode dans le projet — l'agent prend le relais (mode B/C) |
 | `menu` / `?` | — | le menu |
 

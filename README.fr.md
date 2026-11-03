@@ -23,6 +23,7 @@
      statut <projet>    → où en est un projet (phase + gate + avancement)
      new <nom>          → créer un projet (kit + _meta neuf)
      add <dossier>      → ajouter le kit à un projet existant (jamais d'écrasement)
+     update             → (depuis un projet) resync les fichiers génériques du kit (zéro écrasement)
      commence <nom>     → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
 3. Dans l'agent (opencode) :
      /scan                        → le scan natif, présenté et conduit par l'agent

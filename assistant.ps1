@@ -185,7 +185,7 @@ function Copy-Kit([string]$target, [string]$nom) {
     $rg = Join-Path $Root "$MetaFolder/registry/README.md"
     if (Test-Path $rg) { Copy-Item $rg (Join-Path $proj "registry/README.md") }
     [System.IO.File]::WriteAllText((Join-Path $proj "registry/connexions.md"),
-      "# registry/connexions.md - registres des connexions du projet`n", $utf8)
+      "# registry/connexions.md - registres des connexions du projet`nkit_source: $Root`n", $utf8)
     [System.IO.File]::WriteAllText((Join-Path $proj "logs/.gitkeep"), "", $utf8)
     [System.IO.File]::WriteAllText((Join-Path $proj "report/.gitkeep"), "", $utf8)
     $copied += 1
@@ -194,7 +194,97 @@ function Copy-Kit([string]$target, [string]$nom) {
   return @{ Copied = $copied; Skipped = $skipped }
 }
 
+# Resync des fichiers GENERIQUES du kit vers le projet (zero ecrasement : seuls les
+# fichiers ABSENTS du projet sont copies, y compris a l'interieur des dossiers existants).
+# Retourne la liste des chemins ajoutes (relatifs au projet).
+function Update-Kit([string]$target, [string]$kitRoot) {
+  $added = @()
+  # 1) Fichiers racine generiques (JAMAIS .gitignore = data du projet)
+  foreach ($f in @("AGENT-projet.md","referentiel-templates-PM2.md","opencode.json","assistant.ps1","assistant.sh")) {
+    $s = Join-Path $kitRoot $f
+    $d = Join-Path $target $f
+    if ((Test-Path $s) -and -not (Test-Path $d)) { Copy-Item $s $d; $added += $f }
+  }
+  # 2) Dossiers de phases + checklists + docs + tools : les fichiers manquants (recursif)
+  $dirs = @(Get-ChildItem -Path $kitRoot -Directory |
+    Where-Object { $_.Name -match '^0[0-9] ' -or @("checklists","docs","tools") -contains $_.Name } |
+    ForEach-Object { $_.Name })
+  foreach ($d in $dirs) {
+    $src = Join-Path $kitRoot $d
+    $dst = Join-Path $target $d
+    if (-not (Test-Path $dst)) {
+      Copy-Item $src $dst -Recurse
+      $added += "$d/ (dossier entier)"
+    } else {
+      $srcLen = $src.Length
+      $missing = @(Get-ChildItem $src -File -Recurse | Where-Object { -not (Test-Path (Join-Path $dst $_.FullName.Substring($srcLen + 1))) })
+      foreach ($m in $missing) {
+        $rel = $m.FullName.Substring($srcLen + 1)
+        $mdst = Join-Path $dst $rel
+        $mdir = Split-Path $mdst -Parent
+        if (-not (Test-Path $mdir)) { New-Item -ItemType Directory -Force -Path $mdir | Out-Null }
+        Copy-Item $m.FullName $mdst
+        $added += (Join-Path $d $rel)
+      }
+    }
+  }
+  # 3) .opencode/agent + command (fichiers manquants, recursif)
+  foreach ($sub in @("agent","command")) {
+    $src = Join-Path $kitRoot ".opencode/$sub"
+    $dst = Join-Path $target ".opencode/$sub"
+    if (-not (Test-Path $src)) { continue }
+    if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Force -Path $dst | Out-Null }
+    $srcLen = $src.Length
+    $missing = @(Get-ChildItem $src -File -Recurse | Where-Object { -not (Test-Path (Join-Path $dst $_.FullName.Substring($srcLen + 1))) })
+    foreach ($m in $missing) {
+      $rel = $m.FullName.Substring($srcLen + 1)
+      $mdst = Join-Path $dst $rel
+      $mdir = Split-Path $mdst -Parent
+      if (-not (Test-Path $mdir)) { New-Item -ItemType Directory -Force -Path $mdir | Out-Null }
+      Copy-Item $m.FullName $mdst
+      $added += ".opencode/$sub/$rel"
+    }
+  }
+  return $added
+}
+
 # -- Commandes -----------------------------------------------------------------
+function Cmd-Update {
+  # Lance DEPUIS le projet (dossier courant) : resync le kit generique, zero ecrasement.
+  $p = (Get-Location).Path
+  if (-not (Test-ProjectDir $p)) {
+    Write-Host "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet - avec projet.md ou _meta/)."
+    return
+  }
+  # Origine du kit : ligne 'kit_source: <chemin>' dans _meta/registry/connexions.md
+  $reg = Join-Path $p "$MetaFolder/registry/connexions.md"
+  $kitSrc = $null
+  if (Test-Path $reg) {
+    foreach ($l in (Get-Content $reg -Encoding UTF8)) {
+      if ($l -match '^\s*kit_source:\s*(.+)$') { $kitSrc = $Matches[1].Trim(); break }
+    }
+  }
+  if ($null -eq $kitSrc) {
+    Write-Host "Pas de 'kit_source' dans $reg - je ne sais pas d'ou vient le kit."
+    Write-Host "  Ajoute la ligne : kit_source: <chemin du kit>"
+    return
+  }
+  if (-not (Test-Path (Join-Path $kitSrc "assistant.ps1"))) {
+    Write-Host "Kit source introuvable ou invalide : $kitSrc"
+    return
+  }
+  Write-Host ""
+  Write-Host "Update du kit depuis : $kitSrc"
+  Write-Host "  (zero ecrasement : seuls les fichiers du kit manquants sont ajoutes)"
+  $added = @(Update-Kit -Target $p -KitRoot $kitSrc)
+  if ($added.Count -eq 0) {
+    Write-Host "  Deja a jour - rien a ajouter."
+  } else {
+    Write-Host ("  {0} elements ajoutes :" -f $added.Count)
+    foreach ($a in $added) { Write-Host ("    + $a") }
+  }
+  Write-Host ""
+}
 function Cmd-Scan {
   $roots = @(Get-Racines)
   if ($roots.Count -eq 0) {
@@ -344,7 +434,7 @@ function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
   Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
-  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : ' commence le projet '"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $name)"
 }
 
@@ -375,7 +465,7 @@ function Cmd-Add([string]$path) {
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
   Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
-  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : ' commence le projet '"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $leaf)"
 }
 
@@ -406,6 +496,7 @@ function Show-Menu {
   Write-Host "  statut <projet>      phase + gate + avancement"
   Write-Host "  new <nom> [racine] [-doc]   creer un projet  (-doc = SEUL _meta, sans kit : projet sans code)"
   Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
+  Write-Host "  update               (depuis un projet) resync les fichiers generiques du kit (zero ecrasement)"
   Write-Host "------------------------------------------------"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
   Write-Host "  install.ps1          (re)initialiser la config transversale (racines, connexions)"
@@ -430,6 +521,7 @@ switch -regex ($c) {
     Cmd-New $nName $nRoot $docFlag
   }
   '^add$' { Cmd-Add $args[1] }
+  '^update$' { Cmd-Update }
   '^commence$' { Cmd-Commence $args[1] }
   '^menu$|^\?$' { Show-Menu }
   default { Write-Host "Commande inconnue : $c"; Show-Menu }
