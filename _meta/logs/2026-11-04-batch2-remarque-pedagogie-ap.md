@@ -91,6 +91,24 @@ Tests sandbox PS + bash (8 cas chacun) : verts. Bug du test : la config machine 
 sandbox bash sans qualificatif `(...)` sur `racines =` → `get_racines` vide (le format
 réel est `<chemin> (<qualificatif>)`), corrigé dans le test.
 
+## WP-0025 — Le projet mince : séparation data / outillage + bootstrap (idée structurante)
+
+Idée utilisateur : le repo assistant (connecté ou pas à GitHub) se déploie dans les projets
+pour les rendre « autonomes **mais pouvant se reposer sur le repo assistant** ». Le projet
+voyageant (sync chez un tiers) ne porte que **la doc du projet + la config de connexion +
+le bootstrap** ; l'outillage reste dans le repo. Le bootstrap (natif, sans IA) cherche
+l'assistant (local → recherche disque → clone git) **en expliquant tout à l'utilisateur
+tiers** et demande confirmation avant toute action ; une fois l'assistant en place, il
+propose la même op pour le **harness opencode**.
+
+Cadre validé (3 tranches) : data = doc + config (le protocole sort) ; le projet garde un
+**lanceur mince** (délégateur via la config) + le bootstrap ; la config = **chemin local +
+URL git**, annonce + confirmation dans les 2 cas.
+
+→ **WP-0025 tracé** (`backlog/`, phase Planification, a-faire) + décision structurante
+consignée. Il **supersède** la chaîne « projet = copie complète du kit » (WP-0016/0020) ;
+migration non rétroactive.
+
 ## À faire côté utilisateur
 
 1. **Relancer opencode dans un projet** pour le test terrain de WP-0023 :
