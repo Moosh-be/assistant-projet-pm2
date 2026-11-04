@@ -467,6 +467,17 @@ function Cmd-Statut([string]$name) {
     }
     if ($saut.Count -gt 0) { Write-Host ("  Sautees : {0}   (gate non vert - a combler par maitrise, pas par dehabitude)" -f ($saut -join ", ")) }
   }
+  # Roles + tickets (alignement avec la version bash - promis par le doc de la commande).
+  $roles = ""
+  if ($fm["sponsor"] -ne "") { $roles = "sponsor: $($fm['sponsor'])" }
+  if ($fm["bm"] -ne "") { $roles += $(if ($roles) { "  |  " } else { "" }) + "bm: $($fm['bm'])" }
+  if ($fm["cp"] -ne "") { $roles += $(if ($roles) { "  |  " } else { "" }) + "cp: $($fm['cp'])" }
+  if ($fm["moe"] -ne "") { $roles += $(if ($roles) { "  |  " } else { "" }) + "moe: $($fm['moe'])" }
+  if ($roles -ne "") { Write-Host ("  Roles   : {0}" -f $roles) } else { Write-Host "  Roles   : (non identifies)" }
+  $tix = ""
+  if ($fm["sp_project"] -ne "") { $tix = "SP: $($fm['sp_project'])" }
+  if ($fm["op_id"] -ne "") { $tix += $(if ($tix) { "  |  " } else { "" }) + "OP: $($fm['op_id'])" }
+  if ($tix -ne "") { Write-Host ("  Tickets : {0}" -f $tix) } else { Write-Host "  Tickets : (aucune connexion active)" }
 }
 
 function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
