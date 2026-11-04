@@ -25,7 +25,8 @@
      add <folder>       → add the kit to an existing project (never overwrites)
      commence <name>    → THE AGENT : opens opencode in the project (driving, mode B/C)
 3. In the agent (opencode) :
-     /scan                        → the native scan, presented and driven by the agent
+     /ap-scan-projets                 → the native scan, presented and driven by the agent
+     /ap-statut-projet                → native status (phase + gate + progress)
      "start the project <Name>"  → start / resume a PM² project
      "create a project <Name>"   → new project (kit + Lancement phase)
 4. Tip : existing projects ? start with scan. Otherwise : create your first project.

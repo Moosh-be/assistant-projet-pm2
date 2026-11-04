@@ -48,7 +48,7 @@
 | `commence <nom>` | handoff IA | ouvre opencode dans le projet — l'agent prend le relais (mode B/C) |
 | `menu` / `?` | — | le menu |
 
-> **Source unique** : la logique de scan/statut vit **une seule fois** — dans le script. Les commandes opencode `/scan` et `/statut` **l'appellent** ; l'agent présente le résultat et conduit (il ne re-développe pas la logique).
+> **Source unique** : la logique de scan/statut vit **une seule fois** — dans le script. Les commandes opencode `/ap-scan-projets` et `/ap-statut-projet` **l'appellent** ; l'agent présente le résultat et conduit (il ne re-développe pas la logique).
 
 ## 4. Brancher le kit (une fois)
 ```
@@ -64,7 +64,7 @@ Tu as déjà tes dossiers de projets, peut-être par plateforme (`code/github/�
 - **Racine non vide** → le wizard la liste (« je te montre, tu valides ») et note `déjà rempli, rien ne sera déplacé` dans le registre. **Racine absente** → création **uniquement** si tu confirmes.
 - Les racines sont écrites dans la **config machine à la racine du kit** (`.assistant.config`, gitignored — WP-0017 ; le wizard utilise le 1ᵉʳ des 3 noms possibles `.assistant.config` / `assistant.config` / `assistant.config.md`). Les **secrets** (tokens) vivent dans `.assistant-projet.env` (généré par le wizard, saisie masquée), jamais dans la config ni dans un registre.
 - Dans chaque projet, le kit = **manifeste** (`projet.md`, frontmatter source de vérité) + couche **`_meta/`** (fiche, backlog, registres). Ajouter le kit à un dossier existant = **copie des fichiers du kit seulement** ; un conflit (`projet.md` ou `_meta/` déjà présent) est signalé, rien n'est écrasé.
-- **Scan** : `assistant.ps1 scan` (natif) — ou `/scan` dans l'agent (même logique, source unique) → liste les projets en **3 buckets** (`assistés` / `pourraient` (≥1 signal léger : `.git`, `package.json`, `README`…) / `sans signal`) + les `partiel` à compléter, annonce la phase des projets déjà connus, propose l'ajout du kit aux dossiers « pourraient ».
+- **Scan** : `assistant.ps1 scan` (natif) — ou `/ap-scan-projets` dans l'agent (même logique, source unique) → liste les projets en **3 buckets** (`assistés` / `pourraient` (≥1 signal léger : `.git`, `package.json`, `README`…) / `sans signal`) + les `partiel` à compléter, annonce la phase des projets déjà connus, propose l'ajout du kit aux dossiers « pourraient ».
 - **Ajout du kit** : `assistant.ps1 add <dossier>` (natif, jamais d'écrasement) — le pré-existant (`projet.md` ou `_meta/`) est signalé et ignoré.
 - À l'**activation** d'un projet (« commence le projet X », ou `assistant commence <nom>`), l'agent propose les **add-ons pertinents** d'après les signaux de CE projet (ex. `.git` + remote GitHub → GitHub Issue avec le repo pré-rempli) et remplit le frontmatter du projet (`op_id`, `sp_project`).
 
@@ -74,5 +74,5 @@ Tu as déjà tes dossiers de projets, peut-être par plateforme (`code/github/�
 - [ ] `assistant.ps1 scan` / `./assistant.sh scan` : les racines du registre sont scannées, les 3 buckets affichés, les projets « assistés » annoncés avec leur phase
 - [ ] `assistant new <nom>` (dossier temp) : `projet.md` + `_meta/` neuf + `AGENT-projet.md` présents, `node_modules` absent
 - [ ] `assistant add <dossier>` (dossier temp avec contenu pré-existant) : zéro écrasement, les ignorés sont signalés
-- [ ] `/scan` + `/statut` dans opencode : appellent le script natif (pas une 2ᵉ implémentation)
+- [ ] `/ap-scan-projets` + `/ap-statut-projet` dans opencode : appellent le script natif (pas une 2ᵉ implémentation)
 - [ ] Dans opencode : `commence le projet Mon-Projet` → l'agent annonce la phase Lancement et propose le PM2-01

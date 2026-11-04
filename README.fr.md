@@ -26,7 +26,8 @@
      update             → (depuis un projet) resync les fichiers génériques du kit (zéro écrasement)
      commence <nom>     → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
 3. Dans l'agent (opencode) :
-     /scan                        → le scan natif, présenté et conduit par l'agent
+     /ap-scan-projets                 → le scan natif, présenté et conduit par l'agent
+     /ap-statut-projet                → le statut natif (phase + gate + avancement)
      « commence le projet <Nom> » → démarrer / reprendre un projet PM²
      « crée un projet <Nom> »     → nouveau projet (kit + phase Lancement)
 4. Conseil : des projets existants ? commence par scan. Sinon : crée ton premier projet.

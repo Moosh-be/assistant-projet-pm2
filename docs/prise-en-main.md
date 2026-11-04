@@ -23,7 +23,7 @@
    ```
    # nouveau projet :
    cp -r <chemin>/assistant-projet-pm2  <racine>/Mon-Projet
-   # OU exister déjà : laisser le dossier tel quel, l'agent (via /scan) ajoutera le kit si tu le veux
+   # OU exister déjà : laisser le dossier tel quel, l'agent (via /ap-scan-projets) ajoutera le kit si tu le veux
    ```
 2. **Renommer / pré-remplir** `projet.md` : nom, méthode (`PM2`), les 4 rôles (Sponsor, BM, CP, MOE — logins ou noms).
 3. **Ouvrir la session agent** dans `<vault>/projects/Mon-Projet/` :

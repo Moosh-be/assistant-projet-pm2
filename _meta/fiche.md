@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-03 (v14 : +WP-0020 update — un projet resync son kit depuis le projet, zéro écrasement)"
+mis_a_jour: "2026-11-04 (v15 : +WP-0021/0022/0023 — remarques au vol, pédagogie phases sautées, préfixe /ap- sur les slash-commands)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -35,7 +35,7 @@ mis_a_jour: "2026-11-03 (v14 : +WP-0020 update — un projet resync son kit depu
 ## 3. État de la phase (couche méta — les WPs sont dans `backlog/`)
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
-| **Lancement** | WP-0001 → 0020 (20) | 11/20 | ☐ RfP |
+| **Lancement** | WP-0001 → 0023 (23) | 14/23 | ☐ RfP |
 | **Planification** | — | 0 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
@@ -48,7 +48,7 @@ mis_a_jour: "2026-11-03 (v14 : +WP-0020 update — un projet resync son kit depu
 | [WP-0008](backlog/WP-0008-candidats-racines-parent.md) — wizard : proposer le parent du kit comme racine | **fait** (validé terrain 02/11) | haute |
 | [WP-0009](backlog/WP-0009-detecteur-projets-multi-signaux.md) — détecteur multi-signaux (spec) | a-faire | moyenne |
 | [WP-0010](backlog/WP-0010-op-token-lien-env.md) — wizard OP : lien clé API + fichier d'env | **fait** (validé terrain 02/11) | moyenne |
-| [WP-0011](backlog/WP-0011-wizard-oui-o.md) — fix wizard : accepter « o » (oui) | **attend validation terrain** | haute |
+| [WP-0011](backlog/WP-0011-wizard-oui-o.md) — fix wizard : accepter « o » (oui) | **fait** | haute |
 | [WP-0012](backlog/WP-0012-scan-liste-projets.md) — /scan : 3 buckets (assistés / pourraient / sans signal) | **fait** (validé terrain 02/11) | haute |
 | [WP-0013](backlog/WP-0013-install-menu-fin.md) — install : menu de fin + conseil | **fait** (validé terrain 02/11) | haute |
 | [WP-0014](backlog/WP-0014-activation-projet-addons.md) — activation : add-ons pertinents par signaux | a-faire | moyenne |
@@ -56,6 +56,9 @@ mis_a_jour: "2026-11-03 (v14 : +WP-0020 update — un projet resync son kit depu
 | [WP-0017](backlog/WP-0017-config-machine-env.md) — config machine `.assistant.config` (racine du kit) + secrets `.assistant-projet.env` | **fait** (validé terrain 02/11) | haute |
 | [WP-0019](backlog/WP-0019-projet-sans-code.md) — projet sans code : un repo peut ne contenir que `_meta` (fiche = source de vérité, `new -doc`) | **en-cours** (code fait, tests sandbox verts) | haute |
 | [WP-0020](backlog/WP-0020-update-kit-depuis-le-projet.md) — `update` : le projet resync son kit depuis le projet (zéro écrasement, `kit_source` automatique) | **en-cours** (code fait, tests sandbox verts) | haute |
+| [WP-0021](backlog/WP-0021-remark-journal-remarques-au-vol.md) — `remark` : journal des remarques au vol (depuis le projet → `_meta/registry/remarques.md`, remontée au projet assistant) | **en-cours** (code fait, tests sandbox PS+bash verts) | haute |
+| [WP-0022](backlog/WP-0022-pedagogie-phases-sautees.md) — pédagogie PM2 : 4 phases expliquées dans new/add + phases sautées signalées par `statut` | **en-cours** (code fait, tests sandbox PS+bash verts) | haute |
+| [WP-0023](backlog/WP-0023-prefixe-ap-commandes-opencode.md) — préfixe `/ap-` sur les slash-commands (espace de nommage réservé assistant-projet ; natives inchangées) | **en-cours** (renoms + refs faits, test terrain à faire : relancer opencode) | haute |
 
 ## 4. Les plans de gestion envisagés (anti-surcharge)
 | Document | Statut : envisagé / utilisé / ignoré | Pourquoi |

@@ -8,11 +8,12 @@
 #   statut <projet>    phase + gate + avancement d'un projet
 #   new <nom> [racine] cree un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit a un projet existant (jamais d'ecrasement)
+#   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
 #   commence <nom>     -> l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
 #
 # Pure ASCII (Windows PowerShell 5.1 lit les .ps1 en ANSI sans BOM UTF-8).
-# La logique de scan/statut vit ICI (source unique) : les commandes opencode /scan /statut l'appellent.
+# La logique de scan/statut vit ICI (source unique) : les commandes opencode /ap-scan-projets /ap-statut-projet l'appellent.
 
 $ErrorActionPreference = "Stop"
 # PSScriptRoot (et pas $MyInvocation.MyCommand.Path) : robuste quel que soit le mode d'appel
@@ -248,6 +249,32 @@ function Update-Kit([string]$target, [string]$kitRoot) {
   return $added
 }
 
+# -- Remarque au vol (WP-0021) -------------------------------------------------
+# Journal des remarques : on note au fil de l'usage, on remonte au projet assistant.
+function Cmd-Remarque([string]$msg) {
+  $p = (Get-Location).Path
+  if (-not (Test-ProjectDir $p)) {
+    Write-Host "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet - avec projet.md ou $MetaFolder/)."
+    return
+  }
+  if ([string]::IsNullOrWhiteSpace($msg)) { Write-Host "Usage : assistant remark <ta remarque>"; return }
+  $dir = Join-Path $p "$MetaFolder/registry"
+  if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+  $f = Join-Path $dir "remarques.md"
+  $date = Get-Date -Format "yyyy-MM-dd"
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
+  $line = "- [$date] $msg"
+  if (Test-Path $f) {
+    $c = [System.IO.File]::ReadAllText($f, [System.Text.Encoding]::UTF8)
+    [System.IO.File]::WriteAllText($f, ($c + $line + "`r`n"), $utf8)
+  } else {
+    $h = "# remarques.md - journal des remarques au vol`r`n> Notes pendant l'usage (kit ou projet) ; l'agent propose de remonter au projet assistant les entrees marqees [pour l'assistant].`r`n"
+    [System.IO.File]::WriteAllText($f, ($h + $line + "`r`n"), $utf8)
+  }
+  Write-Host "Notee : $f"
+  Write-Host "  Pour une amelioration du kit : ajouter [pour l'assistant] dans l'entree."
+}
+
 # -- Commandes -----------------------------------------------------------------
 function Cmd-Update {
   # Lance DEPUIS le projet (dossier courant) : resync le kit generique, zero ecrasement.
@@ -355,7 +382,7 @@ function Cmd-Scan {
 }
 
 function Cmd-Statut([string]$name) {
-  # Sans argument : le projet du DOSSIER COURANT (si c'en est un) - pour le /statut depuis le projet.
+  # Sans argument : le projet du DOSSIER COURANT (si c'en est un) - pour le /ap-statut-projet depuis le projet.
   if ([string]::IsNullOrWhiteSpace($name)) {
     if (Test-ProjectDir (Get-Location).Path) { $p = (Get-Location).Path }
     else { Write-Host "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return }
@@ -376,12 +403,9 @@ function Cmd-Statut([string]$name) {
   Write-Host "=== Statut : $(Split-Path $p -Leaf) ==="
   Write-Host "  (source : $srcLabel)"
   Write-Host ("  Phase : {0}   |   Gate suivant : {1}" -f $fm["phase"], $fm["gate_suivant"])
-  $r1 = @(); if ($fm["sponsor"]) { $r1 += "sponsor: $($fm['sponsor'])" }; if ($fm["bm"]) { $r1 += "bm: $($fm['bm'])" }; if ($fm["cp"]) { $r1 += "cp: $($fm['cp'])" }; if ($fm["moe"]) { $r1 += "moe: $($fm['moe'])" }
-  if ($r1.Count -gt 0) { Write-Host ("  Roles   : {0}" -f ($r1 -join "  |  ")) } else { Write-Host "  Roles   : (non identifies)" }
-  $c1 = @(); if ($fm["sp_project"]) { $c1 += "SP: $($fm['sp_project'])" }; if ($fm["op_id"]) { $c1 += "OP: $($fm['op_id'])" }
-  if ($c1.Count -gt 0) { Write-Host ("  Tickets : {0}" -f ($c1 -join "  |  ")) } else { Write-Host "  Tickets : (aucune connexion active)" }
-  # Table "Etat de la phase" (section 3) - lue dans la meme source (projet.md ou fiche.md)
+  # Pedagogie (WP-0022) : phases sautees = signalees (la table d'avancement = source de verite).
   $in3 = $false; $table = $false
+  $phaseNames = @(); $gateByPhase = @{}
   $lines3 = [System.IO.File]::ReadAllLines($srcFile, [System.Text.Encoding]::UTF8)
   foreach ($l in $lines3) {
     if ($l -match '^## 3\.') { $in3 = $true; continue }
@@ -389,7 +413,30 @@ function Cmd-Statut([string]$name) {
     if ($in3 -and $l.TrimStart().StartsWith("|")) {
       if (-not $table -and $l -match '^\| Phase \|') { $table = $true; Write-Host "  Avancement :" }
       if ($table) { Write-Host ("    {0}" -f $l.Trim()) }
+      $cells = @(($l -split '\|') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+      if ($cells.Count -ge 4 -and $cells[0] -ne "Phase" -and $cells[0] -notmatch '^-+$') {
+        $nm = ($cells[0] -replace '\*','').Trim()
+        $phaseNames += $nm
+        $gateByPhase[$nm] = $cells[3]
+      }
     }
+  }
+  # Phase courante -> rang (prefixe ASCII : les noms reels peuvent etre accentues).
+  $cp = "Lan"
+  if ($fm["phase"] -like "Pla*") { $cp = "Pla" } elseif ($fm["phase"] -like "Ex*") { $cp = "Ex" } elseif ($fm["phase"] -like "Cl*") { $cp = "Cl" }
+  $idx = -1
+  for ($i = 0; $i -lt $phaseNames.Count; $i++) { if ($phaseNames[$i] -like "$cp*") { $idx = $i; break } }
+  $ok1 = [string][char]0x2611   # case a cocher cochee (gate vert)
+  $ok2 = [string][char]0x2705   # marque de verification
+  $dash = [string][char]0x2014  # tiret long (pas de gate sur cette phase)
+  if ($idx -ge 1) {
+    $saut = @()
+    for ($i = 0; $i -lt $idx; $i++) {
+      $g = "$($gateByPhase[$phaseNames[$i]])"
+      if ($g.StartsWith($dash)) { continue }
+      if (-not ($g.Contains($ok1) -or $g.Contains($ok2))) { $saut += $phaseNames[$i] }
+    }
+    if ($saut.Count -gt 0) { Write-Host ("  Sautees : {0}   (gate non vert - a combler par maitrise, pas par dehabitude)" -f ($saut -join ", ")) }
   }
 }
 
@@ -431,10 +478,14 @@ function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
   Write-Host ("  {0} elements copies, {1} ignores." -f $res.Copied, $res.Skipped.Count)
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
   Write-Host ""
+  Write-Host "  PM2 : 4 phases (Lancement -> Planification -> Execution -> Cloture), chacune cloturee par un gate (checklist)."
+  Write-Host "  On attaque par la Lancement. Une phase peut etre sautee, mais le statut le signalera ensuite - a faire par maitrise ou curiosite."
+  Write-Host ""
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
   Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
-  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $name)"
 }
 
@@ -462,10 +513,14 @@ function Cmd-Add([string]$path) {
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
   $leaf = Split-Path $target -Leaf
   Write-Host ""
+  Write-Host "  PM2 : 4 phases (Lancement -> Planification -> Execution -> Cloture), chacune cloturee par un gate (checklist)."
+  Write-Host "  On attaque par la Lancement. Une phase peut etre sautee, mais le statut le signalera ensuite - a faire par maitrise ou curiosite."
+  Write-Host ""
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
   Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
-  Write-Host "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $leaf)"
 }
 
@@ -492,11 +547,13 @@ function Show-Menu {
   Write-Host "================================================"
   Write-Host " assistant - menu  (sans IA : rapide, gratuit)"
   Write-Host "================================================"
+  Write-Host "  PM2 : Lancement -> Planification -> Execution -> Cloture  (1 gate = 1 checklist par phase)"
   Write-Host "  scan                 les projets des racines : assistes / pourraient / sans signal"
   Write-Host "  statut <projet>      phase + gate + avancement"
   Write-Host "  new <nom> [racine] [-doc]   creer un projet  (-doc = SEUL _meta, sans kit : projet sans code)"
   Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
   Write-Host "  update               (depuis un projet) resync les fichiers generiques du kit (zero ecrasement)"
+  Write-Host "  remark <texte>       (depuis un projet) journal des remarques au vol (remontee au projet assistant)"
   Write-Host "------------------------------------------------"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
   Write-Host "  install.ps1          (re)initialiser la config transversale (racines, connexions)"
@@ -522,6 +579,7 @@ switch -regex ($c) {
   }
   '^add$' { Cmd-Add $args[1] }
   '^update$' { Cmd-Update }
+  '^remark$' { Cmd-Remarque $args[1] }
   '^commence$' { Cmd-Commence $args[1] }
   '^menu$|^\?$' { Show-Menu }
   default { Write-Host "Commande inconnue : $c"; Show-Menu }

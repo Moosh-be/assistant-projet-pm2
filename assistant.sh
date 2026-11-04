@@ -9,10 +9,11 @@
 #   statut <projet>    phase + gate + avancement d'un projet
 #   new <nom> [racine] crée un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit à un projet existant (jamais d'écrasement)
+#   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
 #   commence <nom>     → l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
 #
-# La logique de scan/statut vit ICI (source unique) : les commandes opencode /scan /statut l'appellent.
+# La logique de scan/statut vit ICI (source unique) : les commandes opencode /ap-scan-projets /ap-statut-projet l'appellent.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REG_DIR="$ROOT/_meta/registry"
@@ -340,7 +341,7 @@ cmd_statut() {
   local name="$1"
   local p=""
   if [ -z "$name" ]; then
-    # Sans argument : le projet du dossier courant (si c'en est un) — pour le /statut depuis le projet.
+    # Sans argument : le projet du dossier courant (si c'en est un) — pour le /ap-statut-projet depuis le projet.
     if [ -f "$(pwd)/projet.md" ] || [ -f "$(pwd)/$META/fiche.md" ]; then p="$(pwd)"
     else echo "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return; fi
   else
@@ -359,6 +360,39 @@ cmd_statut() {
   phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
   gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
   printf '  Phase : %s   |   Gate suivant : %s\n' "${phase:-?}" "${gate:-?}"
+  # Pédagogie (WP-0022) : phases sautées = signalées (la table d'avancement = source de vérité).
+  local curp="Lan"
+  case "$phase" in Plan*) curp="Pla";; Ex*) curp="Ex";; Cl*) curp="Cl";; esac
+  local rows; rows="$(awk -F'|' '/^## 3\./{in3=1;next} in3 && /^## /{exit} in3 {
+      n=split($0, cc, "|");
+      if (n < 6) next;
+      name=cc[2]; gate=cc[5];
+      gsub(/[*]/, "", name); gsub(/^ +| +$/, "", name);
+      gsub(/^ +| +$/, "", gate);
+      if (name == "Phase" || name ~ /^-+$/) next;
+      if (gate != "") print name "\t" gate
+    }' "$src")"
+  local idx=0 k=0 name gate
+  while IFS=$'\t' read -r name gate; do
+    [ -n "$name" ] || continue
+    k=$((k+1))
+    case "$name" in ${curp}*) idx=$k ;; esac
+  done <<< "$rows"
+  if [ "$idx" -gt 1 ]; then
+    local j=0 sautees=""
+    while IFS=$'\t' read -r name gate; do
+      [ -n "$name" ] || continue
+      j=$((j+1))
+      if [ "$j" -lt "$idx" ]; then
+        case "$gate" in
+          "☑"*|✅*) : ;;
+          "—"*) : ;;
+          *) sautees="${sautees:+$sautees, }$name" ;;
+        esac
+      fi
+    done <<< "$rows"
+    [ -n "$sautees" ] && printf '  Sautees : %s   (gate non vert - a combler par maitrise, pas par dehabitude)\n' "$sautees"
+  fi
   spon="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sponsor:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   bm="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^bm:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   cp2="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^cp:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
@@ -416,10 +450,14 @@ cmd_new() {
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
   echo ""
+  echo "  Méthode PM2 : 4 phases (Lancement → Planification → Exécution → Clôture), chacune clôturée par un gate (checklist)."
+  echo "  On attaque par la Lancement. Une phase peut être sautée, mais le statut le signalera ensuite — à faire par maîtrise ou curiosité."
+  echo ""
   echo "  Prochain pas : aller dans le projet et lancer l'agent :"
   echo "    cd $target"
   echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
-  echo "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   echo "  (ou, sans ouvrir opencode : assistant commence ${name})"
 }
 
@@ -449,10 +487,13 @@ cmd_add() {
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
   echo ""
+  echo "  Méthode PM2 : 4 phases (Lancement → Planification → Exécution → Clôture), chacune clôturée par un gate (checklist)."
+  echo "  On attaque par la Lancement. Une phase peut être sautée, mais le statut le signalera ensuite — à faire par maîtrise ou curiosité."
+  echo ""
   echo "  Prochain pas : aller dans le projet et lancer l'agent :"
   echo "    cd $target"
   echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
-  echo "  Puis tester :  /statut   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : « commence le projet »"
   echo "  (ou, sans ouvrir opencode : assistant commence $(basename "$target"))"
 }
 
@@ -470,17 +511,45 @@ cmd_commence() {
   ( cd "$p" && exec opencode )
 }
 
+# cmd_remark : journal des remarques au vol (WP-0021) — lancé DEPUIS le projet.
+cmd_remark() {
+  local msg="$1"
+  local p; p="$(pwd)"
+  if [ ! -f "$p/projet.md" ] && [ ! -f "$p/$META/fiche.md" ]; then
+    echo "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet — avec projet.md ou $META/)."
+    return
+  fi
+  if [ -z "$msg" ]; then echo "Usage : assistant remark <ta remarque>"; return; fi
+  local dir="$p/$META/registry"; mkdir -p "$dir"
+  local f="$dir/remarques.md"
+  local date; date="$(date +%F)"
+  local line="- [$date] $msg"
+  if [ -f "$f" ]; then
+    printf '%s\n' "$line" >> "$f"
+  else
+    {
+      echo "# remarques.md — journal des remarques au vol"
+      echo "> Notes pendant l'usage (kit ou projet) ; l'agent propose de remonter au projet assistant les entrées marquées [pour l'assistant]."
+    } > "$f"
+    printf '%s\n' "$line" >> "$f"
+  fi
+  echo "Notée : $f"
+  echo "  Pour une amélioration du kit : ajouter [pour l'assistant] dans l'entrée."
+}
+
 show_menu() {
   cat <<'EOF'
 
 ================================================
  assistant - menu  (sans IA : rapide, gratuit)
+  PM2 : Lancement → Planification → Exécution → Clôture  (1 gate = 1 checklist par phase)
 ================================================
   scan                 les projets des racines : assistés / pourraient / sans signal
   statut <projet>      phase + gate + avancement (lit projet.md ou _meta/fiche.md)
   new <nom> [racine] [-doc]   créer un projet  (-doc = SEUL _meta, sans kit : projet sans code)
   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
   update               (depuis un projet) resync les fichiers génériques du kit (zéro écrasement)
+  remark <texte>       (depuis un projet) journal des remarques au vol (remontée au projet assistant)
 ------------------------------------------------
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
   install.sh           (re)initialiser la config transversale (racines, connexions)
@@ -505,7 +574,8 @@ case "$c" in
     cmd_new "$nname" "$nroot" "$ndoc" ;;
   add) cmd_add "${2:-}" ;;
   update) cmd_update ;;
+  remark) cmd_remark "${2:-}" ;;
   commence) cmd_commence "${2:-}" ;;
   menu|"\?") show_menu ;;
-  *) echo "Commande inconnue : "; show_menu ;;
-esac
+  *) echo "Commande inconnue : $c"; show_menu ;;
+esac                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
