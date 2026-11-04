@@ -105,6 +105,12 @@ Cadre validé (3 tranches) : data = doc + config (le protocole sort) ; le projet
 **lanceur mince** (délégateur via la config) + le bootstrap ; la config = **chemin local +
 URL git**, annonce + confirmation dans les 2 cas.
 
+**Politique de versionnage tranchée** (ouvert n°1 du ticket) : **pas de breaking change**,
+mise à jour systématique ; si breaking change inévitable, **le bundle assistant contient
+toutes les versions** (les anciennes deviennent des add-ons de rétro-compat) → un projet
+mince fonctionne toujours ; **chaque projet migre « quand il le sent »** (la config porte
+la référence de version, le lanceur route vers la version du bundle qui le sert).
+
 → **WP-0025 tracé** (`backlog/`, phase Planification, a-faire) + décision structurante
 consignée. Il **supersède** la chaîne « projet = copie complète du kit » (WP-0016/0020) ;
 migration non rétroactive.

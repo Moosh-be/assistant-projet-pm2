@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-04 (v17 : +WP-0025 tracé — le projet mince : séparation data/outillage + bootstrap, decision structurante)"
+mis_a_jour: "2026-11-04 (v18 : WP-0025 — politique de versionnage tranchée : pas de breaking change, bundle cumulatif, migration au rythme du projet)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
