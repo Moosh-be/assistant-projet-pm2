@@ -5,7 +5,8 @@
 #
 # Usage : .\assistant.ps1 <cmd> [args]      (macOS/Linux : ./assistant.sh <cmd> [args])
 #   scan               liste les projets des racines (assistes / pourraient / sans signal)
-#   statut <projet>    phase + gate + avancement d'un projet
+#   statut <projet>    phase + gate + avancement d'un projet (sans argument : le projet courant, ou la liste)
+#   liste              les projets (nom + phase + gate) - depuis le kit ou les racines
 #   new <nom> [racine] cree un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit a un projet existant (jamais d'ecrasement)
 #   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
@@ -381,15 +382,43 @@ function Cmd-Scan {
   Write-Host "Ajouter le kit a un dossier :  assistant add <dossier>   (jamais d'ecrasement)"
 }
 
+# Show-ProjetListe : la liste des projets (nom + phase + gate) - WP-0024.
+function Show-ProjetListe {
+  $seen = @{}
+  $rows = @()
+  foreach ($r in (Get-Racines)) {
+    if (-not (Test-Path $r -PathType Container)) { continue }
+    foreach ($d in (Get-ChildItem $r -Directory)) {
+      if (-not (Test-ProjectDir $d.FullName)) { continue }
+      $full = (Resolve-Path $d.FullName).Path
+      if ($seen.ContainsKey($full)) { continue }
+      $seen[$full] = $true
+      $mf = (Get-MetaFolder)
+      $src = Join-Path $full "projet.md"
+      if (-not (Test-Path $src)) { $src = Join-Path $full "$mf/fiche.md" }
+      $fm = Read-Frontmatter $src
+      $rows += [pscustomobject]@{ Nom = $d.Name; Phase = $fm["phase"]; Gate = $fm["gate_suivant"] }
+    }
+  }
+  Write-Host ""
+  if ($rows.Count -eq 0) { Write-Host "Aucun projet trouve dans les racines."; return }
+  Write-Host ("  Projets ({0}) :  statut <nom>  (le nom = le nom du dossier)" -f $rows.Count)
+  foreach ($x in $rows) {
+    Write-Host ("    {0,-28} [{1,-14} / {2}]" -f $x.Nom, $x.Phase, $x.Gate)
+  }
+}
+
 function Cmd-Statut([string]$name) {
   # Sans argument : le projet du DOSSIER COURANT (si c'en est un) - pour le /ap-statut-projet depuis le projet.
+  # Hors projet : la liste des projets (WP-0024).
   if ([string]::IsNullOrWhiteSpace($name)) {
     if (Test-ProjectDir (Get-Location).Path) { $p = (Get-Location).Path }
-    else { Write-Host "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return }
+    else { Show-ProjetListe; return }
   } else {
     $p = Find-Project $name
     if ($null -eq $p) {
       Write-Host "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
+      Show-ProjetListe
       return
     }
   }
@@ -548,15 +577,20 @@ function Show-Menu {
   Write-Host " assistant - menu  (sans IA : rapide, gratuit)"
   Write-Host "================================================"
   Write-Host "  PM2 : Lancement -> Planification -> Execution -> Cloture  (1 gate = 1 checklist par phase)"
+  Write-Host ""
+  Write-Host "  -- Gerer les projets (depuis le kit ou les racines) --"
   Write-Host "  scan                 les projets des racines : assistes / pourraient / sans signal"
-  Write-Host "  statut <projet>      phase + gate + avancement"
+  Write-Host "  liste                les projets (nom + phase + gate)"
+  Write-Host "  statut <projet>      phase + gate + avancement d'un projet par son nom"
   Write-Host "  new <nom> [racine] [-doc]   creer un projet  (-doc = SEUL _meta, sans kit : projet sans code)"
   Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
-  Write-Host "  update               (depuis un projet) resync les fichiers generiques du kit (zero ecrasement)"
-  Write-Host "  remark <texte>       (depuis un projet) journal des remarques au vol (remontee au projet assistant)"
-  Write-Host "------------------------------------------------"
-  Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
   Write-Host "  install.ps1          (re)initialiser la config transversale (racines, connexions)"
+  Write-Host ""
+  Write-Host "  -- Dans un projet (depuis le dossier du projet) --"
+  Write-Host "  statut               le statut du projet courant (sans argument)"
+  Write-Host "  update               resync le kit de CE projet (zero ecrasement)"
+  Write-Host "  remark <texte>       journal des remarques au vol (remontee au projet assistant)"
+  Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
   Write-Host "  menu / ?             ce menu"
   Write-Host ""
 }
@@ -578,6 +612,7 @@ switch -regex ($c) {
     Cmd-New $nName $nRoot $docFlag
   }
   '^add$' { Cmd-Add $args[1] }
+  '^liste$' { Show-ProjetListe }
   '^update$' { Cmd-Update }
   '^remark$' { Cmd-Remarque $args[1] }
   '^commence$' { Cmd-Commence $args[1] }

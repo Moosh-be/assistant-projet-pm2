@@ -67,6 +67,30 @@ de `cmd_remark "${2:-}"`). Réparation : 2 micro-éditions ciblées (queue du di
 remark), `bash -n` OK. 4ᵉ occurrence de troncature — la règle tient : après TOUTE modif de
 script, vérifier la fin du fichier + `bash -n` + le diff.
 
+## WP-0024 — `liste` + menu 2 blocs (retour terrain : le menu à la racine du kit)
+
+Retour terrain du 04/11 : l'utilisateur lance `.\assistant.ps1` **à la racine du kit** et
+repère 2 choses :
+1. « `statut <projet>` — je dois donner le nom d'un projet ? sous quelle forme, comment
+   obtenir la liste ? l'autocomplete fonctionne ? » → nom du dossier exact, pas de
+   liste dédiée, pas d'autocomplete.
+2. « on doit distinguer la commande qui lance le gestionnaire d'assistance, locale (pour
+   gérer les projets), et l'assistance qu'on retrouve dans chaque projet séparément
+   (mais qu'on retrouve aussi ici du coup) » → le menu mélangeait les 2 positions.
+
+Décision validée : « 1 + 2 + une commande liste pour celui qui y pense avant ».
+- `statut <nom>` introuvable → message **+ liste** des projets (nom + phase + gate).
+- `statut` sans argument : dans un projet → le projet courant ; hors projet → **la liste**
+  (le kit = un projet = son propre statut, pas la liste).
+- Nouvelle commande **`liste`** (la flotte des racines).
+- Menu + menus install restructurés en 2 blocs : **Gérer les projets** (depuis le kit ou
+  les racines) / **Dans un projet** (depuis le dossier du projet). Les menus install
+  gagnaient aussi `liste` + `update`/`remark` (manquants depuis WP-0020/0021).
+
+Tests sandbox PS + bash (8 cas chacun) : verts. Bug du test : la config machine de la
+sandbox bash sans qualificatif `(...)` sur `racines =` → `get_racines` vide (le format
+réel est `<chemin> (<qualificatif>)`), corrigé dans le test.
+
 ## À faire côté utilisateur
 
 1. **Relancer opencode dans un projet** pour le test terrain de WP-0023 :

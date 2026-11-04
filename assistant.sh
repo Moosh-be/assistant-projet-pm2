@@ -6,7 +6,8 @@
 #
 # Usage : ./assistant.sh <cmd> [args]      (Windows : .\assistant.ps1 <cmd> [args])
 #   scan               liste les projets des racines (assistés / pourraient / sans signal)
-#   statut <projet>    phase + gate + avancement d'un projet
+#   statut <projet>    phase + gate + avancement d'un projet (sans argument : le projet courant, ou la liste)
+#   liste              les projets (nom + phase + gate) - depuis le kit ou les racines
 #   new <nom> [racine] crée un projet (copie du kit + _meta neuf)
 #   add <dossier>      ajoute le kit à un projet existant (jamais d'écrasement)
 #   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
@@ -337,17 +338,48 @@ cmd_scan() {
   echo "Ajouter le kit à un dossier :  assistant add <dossier>   (jamais d'écrasement)"
 }
 
+# liste_projects : la liste des projets (nom + phase + gate) - WP-0024.
+liste_projects() {
+  local seen="" rows=""
+  local r d src fm ph gt nom
+  while IFS= read -r r; do
+    [ -n "$r" ] || continue
+    [ -d "$r" ] || continue
+    for d in "$r"/*/; do
+      [ -d "$d" ] || continue
+      d="${d%/}"
+      { [ -f "$d/projet.md" ] || [ -f "$d/$META/fiche.md" ]; } || continue
+      case "$seen" in *"|$d|"*) continue ;; esac
+      seen="$seen|$d|"
+      src="$d/projet.md"; [ -f "$src" ] || src="$d/$META/fiche.md"
+      ph="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+      gt="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+      nom="$(basename "$d")"
+      rows="$rows$(printf '    %-28s  [%s / %s]\n' "$nom" "$ph" "$gt")
+"
+    done
+  done < <(get_racines)
+  echo ""
+  if [ -z "$rows" ]; then echo "Aucun projet trouvé dans les racines."; return; fi
+  local n=0 line
+  while IFS= read -r line; do [ -n "$line" ] && n=$((n+1)); done <<< "$rows"
+  printf '  Projets (%d) :  statut <nom>  (le nom = le nom du dossier)\n' "$n"
+  printf '%s' "$rows"
+}
+
 cmd_statut() {
   local name="$1"
   local p=""
   if [ -z "$name" ]; then
     # Sans argument : le projet du dossier courant (si c'en est un) — pour le /ap-statut-projet depuis le projet.
+    # Hors projet : la liste des projets (WP-0024).
     if [ -f "$(pwd)/projet.md" ] || [ -f "$(pwd)/$META/fiche.md" ]; then p="$(pwd)"
-    else echo "Usage : assistant statut <projet>   (ou sans argument dans le dossier d'un projet)"; return; fi
+    else liste_projects; return; fi
   else
     p="$(find_project "$name")"
     if [ -z "$p" ]; then
       echo "Projet '$name' introuvable (cherche dans le kit, le dossier courant et les racines)."
+      liste_projects
       return
     fi
   fi
@@ -544,15 +576,19 @@ show_menu() {
  assistant - menu  (sans IA : rapide, gratuit)
   PM2 : Lancement → Planification → Exécution → Clôture  (1 gate = 1 checklist par phase)
 ================================================
+  -- Gérer les projets (depuis le kit ou les racines) --
   scan                 les projets des racines : assistés / pourraient / sans signal
-  statut <projet>      phase + gate + avancement (lit projet.md ou _meta/fiche.md)
+  liste                les projets (nom + phase + gate)
+  statut <projet>      phase + gate + avancement d'un projet par son nom
   new <nom> [racine] [-doc]   créer un projet  (-doc = SEUL _meta, sans kit : projet sans code)
   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
-  update               (depuis un projet) resync les fichiers génériques du kit (zéro écrasement)
-  remark <texte>       (depuis un projet) journal des remarques au vol (remontée au projet assistant)
-------------------------------------------------
-  commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
   install.sh           (re)initialiser la config transversale (racines, connexions)
+
+  -- Dans un projet (depuis le dossier du projet) --
+  statut               le statut du projet courant (sans argument)
+  update               resync le kit de CE projet (zéro écrasement)
+  remark <texte>       journal des remarques au vol (remontée au projet assistant)
+  commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
   menu / ?             ce menu
 
 EOF
@@ -573,6 +609,7 @@ case "$c" in
     done
     cmd_new "$nname" "$nroot" "$ndoc" ;;
   add) cmd_add "${2:-}" ;;
+  liste) liste_projects ;;
   update) cmd_update ;;
   remark) cmd_remark "${2:-}" ;;
   commence) cmd_commence "${2:-}" ;;

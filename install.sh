@@ -341,10 +341,16 @@ echo " Config        : $CONFIG"
 echo " Secrets       : $ENV_FILE"
 echo
 echo " Menu natif (sans IA : rapide, gratuit) :  ./assistant.sh"
+echo "   -- Gérer les projets (depuis le kit ou les racines) --"
 echo "   scan                 tes projets existants : 3 buckets (assistés / pourraient / sans signal) + phase"
+echo "   liste                les projets (nom + phase + gate)"
 echo "   statut <projet>      où en est un projet (phase + gate + avancement)"
 echo "   new <nom> [racine]   créer un projet (kit + _meta neuf)"
 echo "   add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)"
+echo "   -- Dans un projet (depuis le dossier du projet) --"
+echo "   statut               le statut du projet courant (sans argument)"
+echo "   update               resync le kit de CE projet (zéro écrasement)"
+echo "   remark <texte>       journal des remarques au vol (remontée au projet assistant)"
 echo "   commence <nom>       → l'AGENT : ouvre opencode dans le projet"
 echo
 if [ "$roots_str" != "aucune" ]; then
