@@ -1,14 +1,23 @@
 # assistant.ps1 - assistant-projet-pm2 : ENTRY-POINT NATIF (deterministe, sans IA, sans dependance)
 # Principe : tout ce qui est faisable sans IA se fait sans IA.
 #   - l'IA (l'agent opencode) n'intervient QUE pour : conduire (mode B), ecouter (mode C), decider (add-ons).
-#   - le reste (trouver les projets, classer, lire le frontmatter, ajouter le kit) est deterministe -> ici.
+#   - le reste (trouver les projets, classer, lire le frontmatter, deployer) est deterministe -> ici.
+#
+# ARCHITECTURE (WP-0025) : le projet est MINCE.
+#   - la data = projet.md, 01..05, _meta (le fruit du travail) - elle voyage (sync chez un tiers).
+#   - l'outillage = ce repo (le "bundle") : moteur, protocole, templates, checklists, harness opencode.
+#   - la config de connexion = _meta/registry/connexions.md (partagee, voyage) + connexions.local.md (machine).
+#   - le bootstrap (bootstrap.ps1/.sh, dans le projet) retablit le bundle SANS IA : pointer/chercher/installer,
+#     en annoncant + confirmant avant chaque action, puis propose le harness opencode.
 #
 # Usage : .\assistant.ps1 <cmd> [args]      (macOS/Linux : ./assistant.sh <cmd> [args])
 #   scan               liste les projets des racines (assistes / pourraient / sans signal)
 #   statut <projet>    phase + gate + avancement d'un projet (sans argument : le projet courant, ou la liste)
 #   liste              les projets (nom + phase + gate) - depuis le kit ou les racines
-#   new <nom> [racine] cree un projet (copie du kit + _meta neuf)
-#   add <dossier>      ajoute le kit a un projet existant (jamais d'ecrasement)
+#   new <nom> [racine] cree un projet MINCE (data + config + lanceur mince + bootstrap)
+#   add <dossier>      ajoute l'assistant (mince) a un projet existant (jamais d'ecrasement)
+#   sync [--force-harness]  (depuis un projet) verifie le bundle (version) + le harness opencode (remplace update)
+#   bootstrap          (depuis un projet) (re)installe le bundle : pointer / chercher / installer + harness
 #   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
 #   commence <nom>     -> l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
@@ -91,6 +100,15 @@ function Read-Frontmatter([string]$file) {
   return $res
 }
 
+# Lit la valeur d'une ligne "key: value" d'un fichier de config (ou vide si absente).
+function Read-ConfLine([string]$file, [string]$key) {
+  if (-not (Test-Path $file)) { return "" }
+  foreach ($l in (Get-Content $file -Encoding UTF8)) {
+    if ($l -match '^\s*' + [regex]::Escape($key) + '\s*:\s*(.+)$') { return $Matches[1].Trim() }
+  }
+  return ""
+}
+
 function Test-ProjectDir([string]$dir) {
   $mf = (Get-MetaFolder)
   $hasP = Test-Path (Join-Path $dir "projet.md")
@@ -111,46 +129,18 @@ function Find-Project([string]$name) {
   return $null
 }
 
-# Copie du kit dans $target. $nom = nom du projet (pour pre-remplir projet.md + fiche).
+# Depot MINCE du projet (WP-0025) : la data + la config de connexion + le lanceur mince + le bootstrap.
+# L'outillage (protocole, templates, checklists, docs, tools, .opencode) NE PART PAS : il vit
+# dans le bundle (ce repo), pointe par la config. $nom = nom du projet (pre-remplissage projet.md + fiche).
 # Ne copie JAMAIS les donnees d'inception du kit (_meta/fiche.md du kit, backlog/WP-*, logs/*, registry local).
 # Jamais d'ecrasement : un fichier/dossier pre-existant est signale et ignore.
-function Copy-Kit([string]$target, [string]$nom) {
+function Deploy-Kit([string]$target, [string]$nom) {
   $date = Get-Date -Format "yyyy-MM-dd"
   $utf8 = New-Object System.Text.UTF8Encoding($false)
   $copied = 0
   $skipped = @()
 
-  # 1) Fichiers racine du kit (generiques)
-  foreach ($f in @("AGENT-projet.md","referentiel-templates-PM2.md","opencode.json",".gitignore","assistant.ps1","assistant.sh")) {
-    if (Test-Path (Join-Path $Root $f)) {
-      if (Test-Path (Join-Path $target $f)) { $skipped += $f }
-      else { Copy-Item (Join-Path $Root $f) (Join-Path $target $f); $copied++ }
-    }
-  }
-
-  # 2) Dossiers de phases + checklists + docs + tools (liste par pattern, pas en dur)
-  $dirs = @(Get-ChildItem -Path $Root -Directory |
-    Where-Object { $_.Name -match '^0[0-9] ' -or @("checklists","docs","tools") -contains $_.Name } |
-    ForEach-Object { $_.Name })
-  foreach ($d in $dirs) {
-    if (Test-Path (Join-Path $target $d)) { $skipped += "$d/" }
-    else { Copy-Item (Join-Path $Root $d) (Join-Path $target $d) -Recurse; $copied++ }
-  }
-
-  # 3) .opencode (agent + command, SANS node_modules)
-  $ocDst = Join-Path $target ".opencode"
-  if (Test-Path $ocDst) { $skipped += ".opencode/" }
-  else {
-    New-Item -ItemType Directory -Force -Path $ocDst | Out-Null
-    foreach ($sub in @("agent","command")) {
-      $src = Join-Path $Root ".opencode/$sub"
-      if (Test-Path $src) { Copy-Item $src (Join-Path $ocDst $sub) -Recurse }
-    }
-    if (Test-Path "$Root/.opencode/.gitignore") { Copy-Item "$Root/.opencode/.gitignore" "$ocDst/.gitignore" }
-    $copied += 1
-  }
-
-  # 4) projet.md : copie du template avec pre-remplissage (nom + date), sans accent en source
+  # 1) projet.md : copie du template avec pre-remplissage (nom + date)
   $pmdSrc = Join-Path $Root "projet.md"
   if (Test-Path (Join-Path $target "projet.md")) {
     $skipped += "projet.md"
@@ -171,7 +161,19 @@ function Copy-Kit([string]$target, [string]$nom) {
     $copied += 1
   }
 
-  # 5) dossier meta NEUF (pas celui du kit) - nom = meta_folder (defaut _meta)
+  # 2) Dossiers de phases (01..05) VIDES : la data s'y ecrit, l'outillage n'y vit plus.
+  $dirs = @(Get-ChildItem -Path $Root -Directory | Where-Object { $_.Name -match '^0[0-9] ' } | ForEach-Object { $_.Name })
+  foreach ($d in $dirs) {
+    $t = Join-Path $target $d
+    if (Test-Path $t) { $skipped += "$d/" }
+    else {
+      New-Item -ItemType Directory -Force -Path $t | Out-Null
+      [System.IO.File]::WriteAllText((Join-Path $t ".gitkeep"), "", $utf8)
+      $copied++
+    }
+  }
+
+  # 3) dossier meta NEUF (pas celui du kit) + la config de connexion (partagee + machine)
   $proj = Join-Path $target $MetaFolder
   if (Test-Path $proj) {
     $skipped += "$MetaFolder/ (pre-existant, non touche)"
@@ -186,55 +188,76 @@ function Copy-Kit([string]$target, [string]$nom) {
     if (Test-Path $bk) { Copy-Item $bk (Join-Path $proj "backlog/README.md") }
     $rg = Join-Path $Root "$MetaFolder/registry/README.md"
     if (Test-Path $rg) { Copy-Item $rg (Join-Path $proj "registry/README.md") }
-    [System.IO.File]::WriteAllText((Join-Path $proj "registry/connexions.md"),
-      "# registry/connexions.md - registres des connexions du projet`nkit_source: $Root`n", $utf8)
+    # config de connexion PARTAGEE (voyage avec le projet)
+    $gitUrl = ""
+    if (Get-Command git -ErrorAction SilentlyContinue) {
+      try {
+        $g = (& git -C $Root remote get-url origin 2>$null | Select-Object -First 1)
+        if ($g) { $gitUrl = $g.Trim() }
+      } catch { $gitUrl = "" }
+    }
+    $cl = @(
+      "# registry/connexions.md - config de connexion PARTAGEE (voyage avec le projet - WP-0025)",
+      "# assistant_git : le repo assistant (pour le bootstrap : installer)",
+      "# assistant_ref : latest = la derniere version du bundle (ou <version> -> versions/<version>/)",
+      "assistant_git: ${gitUrl}",
+      "assistant_ref: latest",
+      "meta_folder: ${MetaFolder}"
+    )
+    [System.IO.File]::WriteAllLines((Join-Path $proj "registry/connexions.md"), $cl, $utf8)
+    # config de connexion MACHINE (gitignoree, ecrite par le bootstrap - pre-remplie : le bundle est sur CETTE machine)
+    # Chemin en C:/... (barres obliques) : lisible par le lanceur PS, le lanceur bash (MSYS) et opencode.
+    $cll = @(
+      "# registry/connexions.local.md - config de connexion MACHINE (gitignoree, ecrite par le bootstrap)",
+      "assistant_local: $($Root -replace '\\','/')"
+    )
+    [System.IO.File]::WriteAllLines((Join-Path $proj "registry/connexions.local.md"), $cll, $utf8)
     [System.IO.File]::WriteAllText((Join-Path $proj "logs/.gitkeep"), "", $utf8)
     [System.IO.File]::WriteAllText((Join-Path $proj "report/.gitkeep"), "", $utf8)
+    $copied += 1
+  }
+
+  # 4) .gitignore (template projet : gitignore la partie machine de la config + le harness)
+  $giSrc = Join-Path $Root "tools/templates/gitignore-projet.md"
+  if (Test-Path (Join-Path $target ".gitignore")) { $skipped += ".gitignore" }
+  else { Copy-Item $giSrc (Join-Path $target ".gitignore"); $copied++ }
+
+  # 5) Lanceur mince + bootstrap (les 2 : PS + bash, un par OS)
+  $map = @{ "assistant.ps1" = "lanceur-assistant.ps1"; "assistant.sh" = "lanceur-assistant.sh"; "bootstrap.ps1" = "bootstrap-assistant.ps1"; "bootstrap.sh" = "bootstrap-assistant.sh" }
+  foreach ($dst in @("assistant.ps1","assistant.sh","bootstrap.ps1","bootstrap.sh")) {
+    $s = Join-Path $Root ("tools/templates/" + $map[$dst])
+    if (Test-Path (Join-Path $target $dst)) { $skipped += $dst }
+    else { Copy-Item $s (Join-Path $target $dst); $copied++ }
+  }
+
+  # 6) opencode.json : le harness pointe le protocole DANS LE BUNDLE (chemin absolu, en /)
+  $ocJson = Join-Path $target "opencode.json"
+  if (Test-Path $ocJson) { $skipped += "opencode.json" }
+  else {
+    $bs = $Root -replace '\\','/'
+    $jl = @('{',
+      '  "$schema": "https://opencode.ai/config.json",',
+      '  "default_agent": "assistant-projet",',
+      '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"]',
+      '}')
+    [System.IO.File]::WriteAllText($ocJson, (($jl -join "`n") + "`n"), $utf8)
     $copied += 1
   }
 
   return @{ Copied = $copied; Skipped = $skipped }
 }
 
-# Resync des fichiers GENERIQUES du kit vers le projet (zero ecrasement : seuls les
-# fichiers ABSENTS du projet sont copies, y compris a l'interieur des dossiers existants).
-# Retourne la liste des chemins ajoutes (relatifs au projet).
-function Update-Kit([string]$target, [string]$kitRoot) {
+# Deploie le harness opencode du projet depuis le bundle (zero ecrasement : seuls les
+# fichiers ABSENTS du projet sont copies ; opencode.json cree si absent, JAMAIS ecrase ;
+# .gitignore complete en append). Retourne la liste des chemins ajoutes (relatifs au projet).
+function Deploy-Harness([string]$target, [string]$bundle, [string]$meta) {
+  $utf8 = New-Object System.Text.UTF8Encoding($false)
   $added = @()
-  # 1) Fichiers racine generiques (JAMAIS .gitignore = data du projet)
-  foreach ($f in @("AGENT-projet.md","referentiel-templates-PM2.md","opencode.json","assistant.ps1","assistant.sh")) {
-    $s = Join-Path $kitRoot $f
-    $d = Join-Path $target $f
-    if ((Test-Path $s) -and -not (Test-Path $d)) { Copy-Item $s $d; $added += $f }
-  }
-  # 2) Dossiers de phases + checklists + docs + tools : les fichiers manquants (recursif)
-  $dirs = @(Get-ChildItem -Path $kitRoot -Directory |
-    Where-Object { $_.Name -match '^0[0-9] ' -or @("checklists","docs","tools") -contains $_.Name } |
-    ForEach-Object { $_.Name })
-  foreach ($d in $dirs) {
-    $src = Join-Path $kitRoot $d
-    $dst = Join-Path $target $d
-    if (-not (Test-Path $dst)) {
-      Copy-Item $src $dst -Recurse
-      $added += "$d/ (dossier entier)"
-    } else {
-      $srcLen = $src.Length
-      $missing = @(Get-ChildItem $src -File -Recurse | Where-Object { -not (Test-Path (Join-Path $dst $_.FullName.Substring($srcLen + 1))) })
-      foreach ($m in $missing) {
-        $rel = $m.FullName.Substring($srcLen + 1)
-        $mdst = Join-Path $dst $rel
-        $mdir = Split-Path $mdst -Parent
-        if (-not (Test-Path $mdir)) { New-Item -ItemType Directory -Force -Path $mdir | Out-Null }
-        Copy-Item $m.FullName $mdst
-        $added += (Join-Path $d $rel)
-      }
-    }
-  }
-  # 3) .opencode/agent + command (fichiers manquants, recursif)
+  # 1) .opencode/agent + command (fichiers manquants, recursif)
   foreach ($sub in @("agent","command")) {
-    $src = Join-Path $kitRoot ".opencode/$sub"
-    $dst = Join-Path $target ".opencode/$sub"
+    $src = Join-Path $bundle ".opencode/$sub"
     if (-not (Test-Path $src)) { continue }
+    $dst = Join-Path $target ".opencode/$sub"
     if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Force -Path $dst | Out-Null }
     $srcLen = $src.Length
     $missing = @(Get-ChildItem $src -File -Recurse | Where-Object { -not (Test-Path (Join-Path $dst $_.FullName.Substring($srcLen + 1))) })
@@ -245,6 +268,33 @@ function Update-Kit([string]$target, [string]$kitRoot) {
       if (-not (Test-Path $mdir)) { New-Item -ItemType Directory -Force -Path $mdir | Out-Null }
       Copy-Item $m.FullName $mdst
       $added += ".opencode/$sub/$rel"
+    }
+  }
+  # 2) opencode.json (cree si absent - JAMAIS ecrase : il pointe le bundle de CETTE machine)
+  $ocJson = Join-Path $target "opencode.json"
+  if (-not (Test-Path $ocJson)) {
+    $bs = $bundle -replace '\\','/'
+    $jl = @('{',
+      '  "$schema": "https://opencode.ai/config.json",',
+      '  "default_agent": "assistant-projet",',
+      '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"]',
+      '}')
+    [System.IO.File]::WriteAllText($ocJson, (($jl -join "`n") + "`n"), $utf8)
+    $added += "opencode.json"
+  }
+  # 3) .gitignore : les lignes machine (append, jamais d'ecrasement)
+  $gi = Join-Path $target ".gitignore"
+  if (-not (Test-Path $gi)) {
+    $gf = Join-Path $bundle "tools/templates/gitignore-projet.md"
+    if (Test-Path $gf) { Copy-Item $gf $gi; $added += ".gitignore" }
+  } else {
+    $c = [System.IO.File]::ReadAllText($gi, [System.Text.Encoding]::UTF8)
+    $addl = @()
+    if ($c -notmatch '(?m)^[ \t]*\.opencode/') { $addl += ".opencode/" }
+    if ($c -notmatch ('(?m)^[ \t]*' + [regex]::Escape("$meta/registry/connexions.local.md"))) { $addl += "$meta/registry/connexions.local.md" }
+    if ($addl.Count -gt 0) {
+      [System.IO.File]::WriteAllText($gi, ($c.TrimEnd("`r","`n") + "`r`n" + ($addl -join "`r`n") + "`r`n"), $utf8)
+      $added += ".gitignore (append)"
     }
   }
   return $added
@@ -277,41 +327,106 @@ function Cmd-Remarque([string]$msg) {
 }
 
 # -- Commandes -----------------------------------------------------------------
-function Cmd-Update {
-  # Lance DEPUIS le projet (dossier courant) : resync le kit generique, zero ecrasement.
+# sync (WP-0025 - remplace update) : le projet est MINCE - il n'y a plus de copie locale
+# de l'outillage a resynchroniser. sync verifie :
+#   1) le bundle (reference assistant_ref + version trouvee + arriere local git, best effort)
+#   2) la presence du lanceur mince + du bootstrap (ajout des absents seulement)
+#   3) le harness opencode : ajoute les fichiers manquants (zero ecrasement ;
+#      --force-harness pour regenerer le harness depuis le bundle)
+function Cmd-Sync([bool]$forceHarness) {
   $p = (Get-Location).Path
   if (-not (Test-ProjectDir $p)) {
-    Write-Host "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet - avec projet.md ou _meta/)."
+    Write-Host "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet - avec projet.md ou $MetaFolder/)."
     return
   }
-  # Origine du kit : ligne 'kit_source: <chemin>' dans _meta/registry/connexions.md
-  $reg = Join-Path $p "$MetaFolder/registry/connexions.md"
-  $kitSrc = $null
-  if (Test-Path $reg) {
-    foreach ($l in (Get-Content $reg -Encoding UTF8)) {
-      if ($l -match '^\s*kit_source:\s*(.+)$') { $kitSrc = $Matches[1].Trim(); break }
-    }
+  # Config de connexion du projet (partagee + machine) - meme logique que le lanceur mince.
+  $shared = Join-Path $p "$MetaFolder/registry/connexions.md"
+  $localf = Join-Path $p "$MetaFolder/registry/connexions.local.md"
+  $meta = $MetaFolder
+  $mfCfg = Read-ConfLine $shared "meta_folder"
+  if ($mfCfg -ne "") {
+    $meta = $mfCfg
+    $shared = Join-Path $p "$meta/registry/connexions.md"
+    $localf = Join-Path $p "$meta/registry/connexions.local.md"
   }
-  if ($null -eq $kitSrc) {
-    Write-Host "Pas de 'kit_source' dans $reg - je ne sais pas d'ou vient le kit."
-    Write-Host "  Ajoute la ligne : kit_source: <chemin du kit>"
-    return
-  }
-  if (-not (Test-Path (Join-Path $kitSrc "assistant.ps1"))) {
-    Write-Host "Kit source introuvable ou invalide : $kitSrc"
+  $ref = Read-ConfLine $shared "assistant_ref"
+  if ($ref -eq "") { $ref = "latest" }
+  $b = Read-ConfLine $localf "assistant_local"
+  if ($ref -ne "latest" -and (Test-Path (Join-Path $b "versions"))) { $b = Join-Path $b "versions/$ref" }
+  $bValid = ($b -ne "") -and (Test-Path (Join-Path $b "assistant.ps1")) -and (Test-Path (Join-Path $b ".assistant.version"))
+  if (-not $bValid) {
+    Write-Host ""
+    Write-Host "Pas de bundle valide sur cette machine (assistant_local : $(if ($b -eq '') { '(non defini)' } else { $b }))."
+    Write-Host "  -> lancer le bootstrap :  .\bootstrap.ps1   (pointer / chercher / installer)"
     return
   }
   Write-Host ""
-  Write-Host "Update du kit depuis : $kitSrc"
-  Write-Host "  (zero ecrasement : seuls les fichiers du kit manquants sont ajoutes)"
-  $added = @(Update-Kit -Target $p -KitRoot $kitSrc)
-  if ($added.Count -eq 0) {
-    Write-Host "  Deja a jour - rien a ajouter."
+  Write-Host "sync - projet : $p"
+  Write-Host "  Bundle  : $b"
+  $ver = (Get-Content (Join-Path $b ".assistant.version") -TotalCount 1).Trim()
+  Write-Host ("  Version : {0}   (reference : {1})" -f $ver, $ref)
+  # Si le bundle est un repo git local : arriere local vs upstream (sans reseau, best effort).
+  if (Test-Path (Join-Path $b ".git")) {
+    try {
+      $behind = (& git -C $b rev-list --count "HEAD..@{u}" 2>$null | Select-Object -First 1).Trim()
+      if ($behind -match '^\d+$' -and [int]$behind -gt 0) {
+        Write-Host ("  NB : le bundle est {0} commit(s) arriere de son upstream local (git pull possible - c'est a toi de le faire)." -f $behind)
+      }
+    } catch { }
+  }
+  # 2) Presence du lanceur mince + du bootstrap (ajout des absents seulement).
+  $map = @{ "assistant.ps1" = "lanceur-assistant.ps1"; "assistant.sh" = "lanceur-assistant.sh"; "bootstrap.ps1" = "bootstrap-assistant.ps1"; "bootstrap.sh" = "bootstrap-assistant.sh" }
+  $addedFiles = @()
+  foreach ($dst in @("assistant.ps1","assistant.sh","bootstrap.ps1","bootstrap.sh")) {
+    $s = Join-Path $b ("tools/templates/" + $map[$dst])
+    if ((Test-Path $s) -and -not (Test-Path (Join-Path $p $dst))) { Copy-Item $s (Join-Path $p $dst); $addedFiles += $dst }
+  }
+  if ($addedFiles.Count -gt 0) { Write-Host ("  Lanceur : ajoutes (absents) - {0}" -f ($addedFiles -join ", ")) }
+  # 3) Le harness opencode
+  $ocAgent = Join-Path $p ".opencode/agent/assistant-projet.md"
+  $ocJson = Join-Path $p "opencode.json"
+  $need = (-not (Test-Path $ocAgent)) -or (-not (Test-Path $ocJson))
+  if ($forceHarness) {
+    Write-Host "  Harness : --force-harness -> regeneration depuis le bundle (remplace .opencode/agent+command + opencode.json)."
+    $a = Read-Host "  Confirmer ? (o/n)"
+    if ($a -eq "o" -or $a -eq "oui" -or $a -eq "yes" -or $a -eq "y") {
+      foreach ($sub in @("agent","command")) { $d = Join-Path $p ".opencode/$sub"; if (Test-Path $d) { Remove-Item $d -Recurse -Force } }
+      if (Test-Path $ocJson) { Remove-Item $ocJson -Force }
+      $added = @(Deploy-Harness -Target $p -Bundle $b -Meta $meta)
+      foreach ($x in $added) { Write-Host ("    + {0}" -f $x) }
+    } else { Write-Host "  Annule." }
+  } elseif ($need) {
+    Write-Host "  Harness : incomplet/absent (a ajouter, zero ecrasement) :"
+    if (-not (Test-Path $ocAgent)) { Write-Host "    + .opencode/agent/ + .opencode/command/  (copies du bundle)" }
+    if (-not (Test-Path $ocJson)) { Write-Host "    + opencode.json  (instructions -> AGENT-projet.md du bundle + projet.md)" }
+    Write-Host "    + .gitignore  (lignes machine, en append)"
+    $a = Read-Host "  Deployer ? (o/n)"
+    if ($a -eq "o" -or $a -eq "oui" -or $a -eq "yes" -or $a -eq "y") {
+      $added = @(Deploy-Harness -Target $p -Bundle $b -Meta $meta)
+      foreach ($x in $added) { Write-Host ("    + {0}" -f $x) }
+    } else { Write-Host "  Passe - a refaire :  .\assistant.ps1 sync" }
   } else {
-    Write-Host ("  {0} elements ajoutes :" -f $added.Count)
-    foreach ($a in $added) { Write-Host ("    + $a") }
+    Write-Host "  Harness : deploye."
   }
   Write-Host ""
+  Write-Host "  sync OK."
+  if ($ref -eq "latest") { Write-Host "  (Pour figer une version : assistant_ref: <version> dans $shared - le projet migre quand il le sent.)" }
+}
+
+# bootstrap (WP-0025) : lance le bootstrap DU PROJET (retablit le bundle sans IA :
+# pointer / chercher / installer + le harness opencode). Delegue aux args.
+function Cmd-Bootstrap([string[]]$extra) {
+  $p = (Get-Location).Path
+  if (-not (Test-ProjectDir $p)) {
+    Write-Host "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet)."
+    return
+  }
+  $boot = Join-Path $p "bootstrap.ps1"
+  if (-not (Test-Path $boot)) {
+    Write-Host "bootstrap.ps1 absent dans $p (projet incomplet - relancer l'add sur ce dossier)."
+    return
+  }
+  & $boot @extra
 }
 function Cmd-Scan {
   $roots = @(Get-Racines)
@@ -327,26 +442,33 @@ function Cmd-Scan {
     if (-not (Test-Path $r)) { Write-Host "  (racine absente)"; continue }
     $dirs = @(Get-ChildItem -Path $r -Directory -Force -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike '.*' })
     if ($dirs.Count -eq 0) { Write-Host "  (vide)"; continue }
-    $kits = @(); $parts = @(); $pourrs = @(); $plain = @()
+    $mince = @(); $legacy = @(); $parts = @(); $pourrs = @(); $plain = @()
     $mfScan = (Get-MetaFolder)
     foreach ($d in $dirs) {
       $hasP = Test-Path (Join-Path $d.FullName "projet.md")
       $hasA = Test-Path (Join-Path $d.FullName "AGENT-projet.md")
       $hasM = Test-Path (Join-Path $d.FullName $mfScan)
-      if ($hasP -and $hasA) { $kits += $d }
-      elseif ($hasP -or $hasA) { $parts += $d }
-      elseif ($hasM) { $parts += $d }
+      if ($hasP -and $hasM) {
+        # Assiste (WP-0025) : la data (projet.md) + la couche meta.
+        # "mince" = l'outillage est dans le bundle ; "copie complete" = legacy (l'outillage est copie dans le projet).
+        if ($hasA) { $legacy += $d } else { $mince += $d }
+      }
+      elseif ($hasP -or $hasA -or $hasM) { $parts += $d }
       else {
         $s = @(Get-Signaux $d.FullName)
         if ($s.Count -gt 0) { $pourrs += [pscustomobject]@{ Dir = $d; Sig = $s } }
         else { $plain += $d }
       }
     }
-    if ($kits.Count -gt 0) {
+    if (($mince.Count + $legacy.Count) -gt 0) {
       Write-Host "  [Assistes]"
-      foreach ($d in $kits) {
+      foreach ($d in $mince) {
         $fm = Read-Frontmatter (Join-Path $d.FullName "projet.md")
-        Write-Host ("    + {0}  -  phase {1}, gate {2}" -f $d.Name, $fm["phase"], $fm["gate_suivant"])
+        Write-Host ("    + {0}  -  phase {1}, gate {2}   (mince)" -f $d.Name, $fm["phase"], $fm["gate_suivant"])
+      }
+      foreach ($d in $legacy) {
+        $fm = Read-Frontmatter (Join-Path $d.FullName "projet.md")
+        Write-Host ("    + {0}  -  phase {1}, gate {2}   (copie complete, pre-WP-0025)" -f $d.Name, $fm["phase"], $fm["gate_suivant"])
       }
     }
     if ($parts.Count -gt 0) {
@@ -355,9 +477,10 @@ function Cmd-Scan {
         $hasP = Test-Path (Join-Path $d.FullName "projet.md")
         $hasA = Test-Path (Join-Path $d.FullName "AGENT-projet.md")
         $hasM = Test-Path (Join-Path $d.FullName $mfScan)
-        $detail = "kit partiel (manque projet.md ou AGENT-projet.md)"
+        $detail = "partiel (projet.md + $mfScan/ attendus)"
         if ($hasM -and -not $hasP) { $detail = "projet sans code (ne contient que $mfScan) -> assistant add" }
-        elseif ($hasM -and -not $hasA) { $detail = "kit partiel (manque AGENT-projet.md)" }
+        elseif ($hasP -and -not $hasM) { $detail = "manque $mfScan/ -> assistant add" }
+        elseif ($hasA -and -not $hasP) { $detail = "copie du kit sans projet.md -> assistant add" }
         Write-Host ("    ~ {0}  -  {1}" -f $d.Name, $detail)
       }
     }
@@ -373,13 +496,13 @@ function Cmd-Scan {
       Write-Host "  [Sans signal]"
       foreach ($d in $plain) { Write-Host ("    . {0}" -f $d.Name) }
     }
-    $t_kit += $kits.Count; $t_part += $parts.Count; $t_pour += $pourrs.Count; $t_plain += $plain.Count
-    Write-Host ("  -> {0} dossiers : {1} assistes, {2} a completer, {3} pourraient, {4} sans signal" -f $dirs.Count, $kits.Count, $parts.Count, $pourrs.Count, $plain.Count)
+    $t_kit += ($mince.Count + $legacy.Count); $t_part += $parts.Count; $t_pour += $pourrs.Count; $t_plain += $plain.Count
+    Write-Host ("  -> {0} dossiers : {1} assistes, {2} a completer, {3} pourraient, {4} sans signal" -f $dirs.Count, ($mince.Count + $legacy.Count), $parts.Count, $pourrs.Count, $plain.Count)
   }
   Write-Host ""
   Write-Host ("Total : {0} dossiers - {1} assistes, {2} a completer, {3} pourraient, {4} sans signal" -f ($t_kit + $t_part + $t_pour + $t_plain), $t_kit, $t_part, $t_pour, $t_plain)
   Write-Host "Travailler sur un projet :  assistant commence <nom>   (ou, dans opencode : 'commence le projet <nom>')"
-  Write-Host "Ajouter le kit a un dossier :  assistant add <dossier>   (jamais d'ecrasement)"
+  Write-Host "Ajouter l'assistant (mince) a un dossier :  assistant add <dossier>   (jamais d'ecrasement)"
 }
 
 # Show-ProjetListe : la liste des projets (nom + phase + gate) - WP-0024.
@@ -512,19 +635,23 @@ function Cmd-New([string]$name, [string]$rootOverride, [bool]$doc) {
     return
   }
   New-Item -ItemType Directory -Force -Path $target | Out-Null
-  $res = Copy-Kit -Target $target -Nom $name
+  $res = Deploy-Kit -Target $target -Nom $name
   Write-Host ""
   Write-Host "Projet cree : $target"
   Write-Host ("  {0} elements copies, {1} ignores." -f $res.Copied, $res.Skipped.Count)
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
+  Write-Host ""
+  Write-Host "  Le projet est MINCE : la doc (projet.md, 01..05, _meta) + la config de connexion + le lanceur + le bootstrap."
+  Write-Host "  L'outillage (protocole, templates, checklists, harness) vit dans le bundle (le repo assistant), pointe par $MetaFolder/registry/connexions.md."
   Write-Host ""
   Write-Host "  PM2 : 4 phases (Lancement -> Planification -> Execution -> Cloture), chacune cloturee par un gate (checklist)."
   Write-Host "  On attaque par la Lancement. Une phase peut etre sautee, mais le statut le signalera ensuite - a faire par maitrise ou curiosite."
   Write-Host ""
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
-  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
+  Write-Host "    opencode   (l'agent lit le protocole via opencode.json -> annonce la phase + gate : C'EST LE TEST)"
   Write-Host "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Verifier le bundle + le harness :  .\assistant.ps1 sync   (depuis le projet)"
   Write-Host "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $name)"
 }
@@ -543,23 +670,27 @@ function Cmd-Add([string]$path) {
     $target = $found[0]
   }
   $target = $target.Path
-  if (-not (Test-Path (Join-Path $target "projet.md")) -and -not (Test-Path (Join-Path $target "AGENT-projet.md"))) {
-    Write-Host "Aucun marqueur de kit dans '$target' : ajout du kit dans un dossier vierge (OK)."
+  if (-not (Test-Path (Join-Path $target "projet.md")) -and -not (Test-Path (Join-Path $target "AGENT-projet.md")) -and -not (Test-Path (Join-Path $target $MetaFolder))) {
+    Write-Host "Aucun marqueur d'assistant dans '$target' : ajout dans un dossier vierge (OK)."
   }
-  $res = Copy-Kit -Target $target -Nom (Split-Path $target -Leaf)
+  $res = Deploy-Kit -Target $target -Nom (Split-Path $target -Leaf)
   Write-Host ""
-  Write-Host "Kit ajoute : $target"
+  Write-Host "Assistant ajoute (mince) : $target"
   Write-Host ("  {0} elements copies, {1} ignores." -f $res.Copied, $res.Skipped.Count)
   foreach ($s in $res.Skipped) { Write-Host ("  - ignore (pre-existant) : {0}" -f $s) }
   $leaf = Split-Path $target -Leaf
+  Write-Host ""
+  Write-Host "  Le projet est MINCE : la doc (projet.md, 01..05, _meta) + la config de connexion + le lanceur + le bootstrap."
+  Write-Host "  L'outillage (protocole, templates, checklists, harness) vit dans le bundle (le repo assistant), pointe par $MetaFolder/registry/connexions.md."
   Write-Host ""
   Write-Host "  PM2 : 4 phases (Lancement -> Planification -> Execution -> Cloture), chacune cloturee par un gate (checklist)."
   Write-Host "  On attaque par la Lancement. Une phase peut etre sautee, mais le statut le signalera ensuite - a faire par maitrise ou curiosite."
   Write-Host ""
   Write-Host "  Prochain pas : aller dans le projet et lancer l'agent :"
   Write-Host "    cd $target"
-  Write-Host "    opencode   (l'agent lit AGENT-projet.md -> annonce la phase + gate : C'EST LE TEST)"
+  Write-Host "    opencode   (l'agent lit le protocole via opencode.json -> annonce la phase + gate : C'EST LE TEST)"
   Write-Host "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : ' commence le projet '"
+  Write-Host "  Verifier le bundle + le harness :  .\assistant.ps1 sync   (depuis le projet)"
   Write-Host "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   Write-Host "  (ou, sans ouvrir opencode : assistant commence $leaf)"
 }
@@ -590,16 +721,17 @@ function Show-Menu {
   Write-Host "  PM2 : Lancement -> Planification -> Execution -> Cloture  (1 gate = 1 checklist par phase)"
   Write-Host ""
   Write-Host "  -- Gerer les projets (depuis le kit ou les racines) --"
-  Write-Host "  scan                 les projets des racines : assistes / pourraient / sans signal"
+  Write-Host "  scan                 les projets des racines : assistes (mince / copie complete) / pourraient / sans signal"
   Write-Host "  liste                les projets (nom + phase + gate)"
   Write-Host "  statut <projet>      phase + gate + avancement d'un projet par son nom"
-  Write-Host "  new <nom> [racine] [-doc]   creer un projet  (-doc = SEUL _meta, sans kit : projet sans code)"
-  Write-Host "  add <dossier>        ajouter le kit a un projet existant (jamais d'ecrasement)"
+  Write-Host "  new <nom> [racine] [-doc]   creer un projet MINCE  (-doc = SEUL _meta, sans outillage : projet sans code)"
+  Write-Host "  add <dossier>        ajouter l'assistant (mince) a un projet existant (jamais d'ecrasement)"
   Write-Host "  install.ps1          (re)initialiser la config transversale (racines, connexions)"
   Write-Host ""
   Write-Host "  -- Dans un projet (depuis le dossier du projet) --"
   Write-Host "  statut               le statut du projet courant (sans argument)"
-  Write-Host "  update               resync le kit de CE projet (zero ecrasement)"
+  Write-Host "  sync [--force-harness]  verifier le bundle (version) + le harness opencode (remplace update - WP-0025)"
+  Write-Host "  bootstrap          (re)installer le bundle sur cette machine : pointer / chercher / installer + harness"
   Write-Host "  remark <texte>       journal des remarques au vol (remontee au projet assistant)"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
   Write-Host "  menu / ?             ce menu"
@@ -624,7 +756,9 @@ switch -regex ($c) {
   }
   '^add$' { Cmd-Add $args[1] }
   '^liste$' { Show-ProjetListe }
-  '^update$' { Cmd-Update }
+  '^sync$' { if ($args.Count -ge 2 -and $args[1] -eq "--force-harness") { Cmd-Sync $true } else { Cmd-Sync $false } }
+  '^update$' { Write-Host "update est devenu sync (WP-0025 : projet mince - plus de copie locale a resynchroniser)"; if ($args.Count -ge 2 -and $args[1] -eq "--force-harness") { Cmd-Sync $true } else { Cmd-Sync $false } }
+  '^bootstrap$' { $ex = @(); if ($args.Count -ge 2) { $ex = @($args[1..($args.Count - 1)]) }; Cmd-Bootstrap $ex }
   '^remark$' { Cmd-Remarque $args[1] }
   '^commence$' { Cmd-Commence $args[1] }
   '^menu$|^\?$' { Show-Menu }

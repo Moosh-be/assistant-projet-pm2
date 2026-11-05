@@ -1,12 +1,12 @@
-# Référentiel des templates PM² (v3.0.1) — catalogue du kit
+# Référentiel des templates PM² (v3.0.1) — catalogue du bundle
 
 > **Source** : catalogue standard PM² v3.0.1 (artefacts de gestion de projet).
-> Chaque template a un **code** (PM2-XX), une **phase**, un **gate** associé, et un **fichier Markdown** dans ce kit.
+> Chaque template a un **code** (PM2-XX), une **phase**, un **gate** associé, et un **fichier Markdown** dans ce bundle.
 > Les **forks** (ex. fork RTBF) enrichissent chaque champ avec leurs propres traductions/adaptations des templates d'origine.
 
 ## Catalogue (22 artefacts)
 
-| Code | Artefact | Phase | Gate | Fichier du kit |
+| Code | Artefact | Phase | Gate | Fichier du bundle |
 |---|---|---|---|---|
 | PM2-01.I | Demande de lancement de projet | Lancement | → RfP | `01 Lancement/PM2-01.I-*.md` |
 | PM2-02.I | Cas d'usage (business case) | Lancement | → RfP | `01 Lancement/PM2-02.I-*.md` |

@@ -1,7 +1,7 @@
 # assistant-projet-pm2
 
-**Kit Markdown + protocole d'agent IA** pour constituer et mener un projet selon **PM²**.
-A **Markdown kit + AI-agent protocol** to set up and run a project following **PM²**.
+**Assistant Markdown + protocole d'agent IA** pour constituer et mener un projet selon **PM²** — le projet reste **mince** (la doc), l'outillage vit dans ce repo (le « bundle »).
+A **Markdown assistant + AI-agent protocol** to set up and run a project following **PM²** — the project stays **thin** (the docs); the tooling lives in this repo (the « bundle »).
 
 ---
 

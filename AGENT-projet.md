@@ -4,6 +4,7 @@
 > **C'est la note que l'IA lit EN PREMIÈRE dans ce projet.** Elle dit : dans quelle phase on est, quels artefacts sont dus, quelles checklists sont ouvertes, quelles connexions sont actives.
 > **Règle d'or** : l'assistant **interroge pour remplir**, il ne présume jamais. Chaque question posée correspond à **un champ d'un template PM²** (voir `referentiel-templates-PM2.md`).
 > **Règle des phases** : **le gate bloque**. Tant que la checklist de sortie (PM2-27) de la phase courante n'est pas verte, l'assistant ne propose **aucun** artefact de la phase suivante.
+> **Projet mince (WP-0025)** : cette note est lue **depuis le bundle** (le repo assistant) — l'`opencode.json` du projet pointe dessus par chemin absolu. Le projet = la **data** (`projet.md`, `01..05`, `_meta`) ; l'**outillage** (templates, checklists, docs, harness) = le bundle. La connexion projet ↔ bundle : `<projet>/_meta/registry/connexions.md` (partagée, voyage : `assistant_git`, `assistant_ref`) + `connexions.local.md` (machine, gitignorée : `assistant_local` = le bundle sur CETTE machine).
 
 ## 1. État du projet (frontmatter du `projet.md` — source de vérité)
 ```yaml
@@ -22,12 +23,13 @@ op_id: <id>             # connexion OpenProject (optionnel)
 ## 2. Où chercher quoi (routage du projet)
 | Besoin | Aller chercher dans |
 |---|---|
-| **Les artefacts de la phase** | `01 Lancement/` · `02 Planification/` · `03 Exécution/` · `04 Suivi-Controle/` · `05 Cloture/` |
-| **Un template vierge (que remplir)** | `referentiel-templates-PM2.md` (mapping) + le template MD correspondant |
-| **La checklist du gate en cours** | `checklists/gate-<RfP\|RfE\|RfC>.md` |
-| **La checklist du rôle** | `checklists/role-<sponsor\|bm\|cp>.md` |
-| **Les PV / le reporting** | `04 Suivi-Controle/` (PM2-19/22) |
+| **Les artefacts de la phase** | `01 Lancement/` · `02 Planification/` · `03 Exécution/` · `04 Suivi-Controle/` · `05 Cloture/` (dans le projet) |
+| **Un template vierge (que remplir)** | `referentiel-templates-PM2.md` (mapping) + le template MD correspondant — **dans le bundle** (le repo de cette note) |
+| **La checklist du gate en cours** | `checklists/gate-<RfP\|RfE\|RfC>.md` — **dans le bundle** |
+| **La checklist du rôle** | `checklists/role-<sponsor\|bm\|cp>.md` — **dans le bundle** |
+| **Les PV / le reporting** | `04 Suivi-Controle/` (PM2-19/22, dans le projet) |
 | **L'état de la phase** | frontmatter `phase` + `gate_suivant` de `projet.md` |
+| **La connexion au bundle** | `<projet>/_meta/registry/connexions.md` (partagée) + `connexions.local.md` (machine : `assistant_local`) |
 | **Les WPs de développement du repo** (inception) | `_meta/backlog/` (1 fichier = 1 WP) — état dans `_meta/fiche.md` |
 
 ## 3. Le comportement de l'assistant (protocole)
