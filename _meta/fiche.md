@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-06 (PM2-01/02/03 affinés après validations du 06/11 — reste : go formel + rôle challengers → check RfP)"
+mis_a_jour: "2026-11-07 (v19 : WP-0025 fait le 05/11 — le projet mince : moteurs PS/bash, bootstrap sans IA, sync (remplace update), versions figées, docs à jour ; merge wp-0025 vers master le 07/11 + PM2-01/02/03 affinés après validations du 06/11 — reste : go formel + rôle challengers → check RfP)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -36,7 +36,7 @@ mis_a_jour: "2026-11-06 (PM2-01/02/03 affinés après validations du 06/11 — r
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
 | **Lancement** | WP-0001 → 0024 (24) | 14/24 | ☐ RfP |
-| **Planification** | WP-0025 (tracé) | 0/1 | ☐ RfE |
+| **Planification** | WP-0025 | 1/1 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
 
@@ -62,7 +62,7 @@ mis_a_jour: "2026-11-06 (PM2-01/02/03 affinés après validations du 06/11 — r
 | [WP-0022](backlog/WP-0022-pedagogie-phases-sautees.md) — pédagogie PM2 : 4 phases expliquées dans new/add + phases sautées signalées par `statut` | **en-cours** (code fait, tests sandbox PS+bash verts) | haute |
 | [WP-0023](backlog/WP-0023-prefixe-ap-commandes-opencode.md) — préfixe `/ap-` sur les slash-commands (espace de nommage réservé assistant-projet ; natives inchangées) | **en-cours** (renoms + refs faits, test terrain à faire : relancer opencode) | haute |
 | [WP-0024](backlog/WP-0024-liste-projets-menu-2-blocs.md) — `liste` + `statut` (introuvable/hors projet → liste) + menu en 2 blocs (Gérer les projets / Dans un projet) | **en-cours** (code fait, tests sandbox PS+bash verts) | haute |
-| [WP-0025](backlog/WP-0025-projet-mince-bootstrap.md) — le projet mince : séparation data/outillage + bootstrap (annonce + confirmation, local → disque → clone, puis opencode) | **a-faire** (design à dérouler — supersède WP-0016/0020) | haute |
+| [WP-0025](backlog/WP-0025-projet-mince-bootstrap.md) — le projet mince : séparation data/outillage + bootstrap (annonce + confirmation, local → disque → clone, puis opencode) | **fait** (05/11 : code PS+bash + docs, tests T1-T7 verts ; merge vers master en attente du RfP) | haute |
 
 ## 4. Les plans de gestion envisagés (anti-surcharge)
 | Document | Statut : envisagé / utilisé / ignoré | Pourquoi |

@@ -2,21 +2,41 @@
 # assistant.sh — assistant-projet-pm2 : ENTRY-POINT NATIF (déterministe, sans IA, sans dépendance)
 # Principe : tout ce qui est faisable sans IA se fait sans IA.
 #   - l'IA (l'agent opencode) n'intervient QUE pour : conduire (mode B), écouter (mode C), décider (add-ons).
-#   - le reste (trouver les projets, classer, lire le frontmatter, ajouter le kit) est déterministe → ici.
+#   - le reste (trouver les projets, classer, lire le frontmatter, déployer) est déterministe → ici.
+#
+# ARCHITECTURE (WP-0025) : le projet est MINCE.
+#   - la data = projet.md, 01..05, _meta (le fruit du travail) — elle voyage (sync chez un tiers).
+#   - l'outillage = ce repo (le « bundle ») : moteur, protocole, templates, checklists, harness opencode.
+#   - la config de connexion = _meta/registry/connexions.md (partagée, voyage) + connexions.local.md (machine).
+#   - le bootstrap (bootstrap.sh, dans le projet) rétablit le bundle SANS IA : pointer/chercher/installer,
+#     en annonçant + confirmant avant chaque action, puis propose le harness opencode.
 #
 # Usage : ./assistant.sh <cmd> [args]      (Windows : .\assistant.ps1 <cmd> [args])
 #   scan               liste les projets des racines (assistés / pourraient / sans signal)
 #   statut <projet>    phase + gate + avancement d'un projet (sans argument : le projet courant, ou la liste)
 #   liste              les projets (nom + phase + gate) - depuis le kit ou les racines
-#   new <nom> [racine] crée un projet (copie du kit + _meta neuf)
-#   add <dossier>      ajoute le kit à un projet existant (jamais d'écrasement)
-#   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
+#   new <nom> [racine] crée un projet MINCE (data + config + lanceur mince + bootstrap)
+#   add <dossier>      ajoute l'assistant (mince) à un projet existant (jamais d'écrasement)
+#   sync [--force-harness]  (depuis un projet) vérifie le bundle (version) + le harness opencode (remplace update)
+#   bootstrap          (depuis un projet) (ré)installe le bundle : pointer / chercher / installer + harness
+#   remark <texte>     (depuis un projet) journal des remarques au vol (remontée au projet assistant)
 #   commence <nom>     → l'agent : ouvre opencode dans le projet (handoff)
 #   menu / ?           ce menu
 #
 # La logique de scan/statut vit ICI (source unique) : les commandes opencode /ap-scan-projets /ap-statut-projet l'appellent.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# conf_path <p> : chemin au format lisible par les 2 moteurs (Windows : C:/... ; POSIX : tel quel).
+# Sur Git Bash, pwd retourne /c/... ou /tmp/... (MSYS) ; cygpath -w donne C:\... -> normalisé en /.
+# Les chemins écrits dans connexions.local.md / opencode.json DOIVENT être dans ce format :
+# le lanceur PS, le lanceur bash et opencode doivent tous les lire sur la même machine.
+conf_path() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) cygpath -w "$1" 2>/dev/null | tr '\\' '/' ;;
+    *) printf '%s' "$1" ;;
+  esac
+}
 REG_DIR="$ROOT/_meta/registry"
 OLD_CONN="$REG_DIR/connexions.md"   # registre ANCIEN (fallback de transition)
 
@@ -78,51 +98,17 @@ find_project() { # find_project <nom> → chemin du projet (projet.md OU <meta>/
   return 1
 }
 
-# Copie du kit dans $target. $nom = nom du projet. $skipfile = fichier de sortie (liste des ignorés).
-# (un fichier et pas une variable : copy_kit est appelé via $(...) = sous-shell, les variables globales y sont perdues)
-# Ne copie JAMAIS les données d'inception du kit (_meta/fiche.md du kit, backlog/WP-*, logs/*, registry local).
+# Dépôt MINCE du projet (WP-0025) : la data + la config de connexion + le lanceur mince + le bootstrap.
+# L'outillage (protocole, templates, checklists, docs, tools, .opencode) NE PART PAS : il vit
+# dans le bundle (ce repo), pointé par la config. $nom = nom du projet. $skipfile = fichier de sortie.
+# (un fichier et pas une variable : deploy_kit est appelé via $(...) = sous-shell, les variables globales y sont perdues)
 # Jamais d'écrasement : un fichier/dossier pré-existant est signalé et ignoré.
-copy_kit() {
+deploy_kit() {
   local target="$1" nom="$2" skipfile="$3"
   local date; date="$(date +%F)"
   local copied=0; local skipped=()
 
-  # 1) Fichiers racine du kit (génériques)
-  local f
-  for f in AGENT-projet.md referentiel-templates-PM2.md opencode.json .gitignore assistant.ps1 assistant.sh; do
-    if [ -e "$ROOT/$f" ]; then
-      if [ -e "$target/$f" ]; then skipped+=("$f")
-      else cp "$ROOT/$f" "$target/$f"; copied=$((copied+1)); fi
-    fi
-  done
-
-  # 2) Dossiers de phases (0*) + checklists + docs + tools
-  local d
-  for d in "$ROOT"/*; do
-    local base; base="$(basename "$d")"
-    case "$base" in
-      0*) ;;  # dossier de phase "01 Lancement" etc.
-      checklists|docs|tools) ;;
-      *) continue ;;
-    esac
-    if [ -d "$d" ]; then
-      if [ -e "$target/$base" ]; then skipped+=("$base/")
-      else cp -R "$d" "$target/$base"; copied=$((copied+1)); fi
-    fi
-  done
-
-  # 3) .opencode (agent + command, SANS node_modules)
-  if [ -e "$target/.opencode" ]; then skipped+=(".opencode/")
-  else
-    mkdir -p "$target/.opencode"
-    for sub in agent command; do
-      [ -d "$ROOT/.opencode/$sub" ] && cp -R "$ROOT/.opencode/$sub" "$target/.opencode/$sub"
-    done
-    [ -f "$ROOT/.opencode/.gitignore" ] && cp "$ROOT/.opencode/.gitignore" "$target/.opencode/.gitignore"
-    copied=$((copied+1))
-  fi
-
-  # 4) projet.md : copie du template avec pré-remplissage (nom + date), sans écraser
+  # 1) projet.md : copie du template avec pré-remplissage (nom + date), sans écraser
   #    (sed simple et déterministe — même logique que le .ps1 : projet, créé, titre, <AAAA-MM-JJ>)
   if [ -e "$target/projet.md" ]; then skipped+=("projet.md")
   else
@@ -135,7 +121,25 @@ copy_kit() {
     copied=$((copied+1))
   fi
 
-  # 5) dossier méta NEUF (pas celui du kit) — nom = $META (défaut _meta, lu de la config)
+  # 2) Dossiers de phases (01..05) VIDES : la data s'y écrit, l'outillage n'y vit plus.
+  local d base t
+  for d in "$ROOT"/*; do
+    [ -d "$d" ] || continue
+    base="$(basename "$d")"
+    case "$base" in
+      0*) ;;  # dossier de phase "01 Lancement" etc.
+      *) continue ;;
+    esac
+    t="$target/$base"
+    if [ -e "$t" ]; then skipped+=("$base/")
+    else
+      mkdir -p "$t"
+      : > "$t/.gitkeep"
+      copied=$((copied+1))
+    fi
+  done
+
+  # 3) dossier méta NEUF (pas celui du kit) + la config de connexion (partagée + machine)
   local meta="$META"
   if [ -e "$target/$meta" ]; then
     skipped+=("$meta/ (pré-existant, non touché)")
@@ -145,9 +149,44 @@ copy_kit() {
       "$ROOT/tools/templates/fiche-projet.md" > "$target/$meta/fiche.md"
     [ -f "$ROOT/$meta/backlog/README.md" ] && cp "$ROOT/$meta/backlog/README.md" "$target/$meta/backlog/README.md"
     [ -f "$ROOT/$meta/registry/README.md" ] && cp "$ROOT/$meta/registry/README.md" "$target/$meta/registry/README.md"
-    printf '# registry/connexions.md - registres des connexions du projet\nkit_source: %s\n' "$ROOT" > "$target/$meta/registry/connexions.md"
+    # config de connexion PARTAGÉE (voyage avec le projet)
+    local git_url
+    git_url="$(git -C "$ROOT" remote get-url origin 2>/dev/null | head -n1 || true)"
+    {
+      echo "# registry/connexions.md - config de connexion PARTAGÉE (voyage avec le projet - WP-0025)"
+      echo "# assistant_git : le repo assistant (pour le bootstrap : installer)"
+      echo "# assistant_ref : latest = la dernière version du bundle (ou <version> -> versions/<version>/)"
+      echo "assistant_git: $git_url"
+      echo "assistant_ref: latest"
+      echo "meta_folder: $meta"
+    } > "$target/$meta/registry/connexions.md"
+    # config de connexion MACHINE (gitignorée, écrite par le bootstrap - pré-remplie : le bundle est sur CETTE machine)
+    {
+      echo "# registry/connexions.local.md - config de connexion MACHINE (gitignorée, écrite par le bootstrap)"
+      echo "assistant_local: $(conf_path "$ROOT")"
+    } > "$target/$meta/registry/connexions.local.md"
     : > "$target/$meta/logs/.gitkeep"
     : > "$target/$meta/report/.gitkeep"
+    copied=$((copied+1))
+  fi
+
+  # 4) .gitignore (template projet : gitignore la partie machine de la config + le harness)
+  if [ -e "$target/.gitignore" ]; then skipped+=(".gitignore")
+  else cp "$ROOT/tools/templates/gitignore-projet.md" "$target/.gitignore"; copied=$((copied+1)); fi
+
+  # 5) Lanceur mince + bootstrap (les 2 : PS + bash, un par OS)
+  local pair dstname srcname
+  for pair in "assistant.ps1 lanceur-assistant.ps1" "assistant.sh lanceur-assistant.sh" "bootstrap.ps1 bootstrap-assistant.ps1" "bootstrap.sh bootstrap-assistant.sh"; do
+    dstname="${pair%% *}"
+    srcname="${pair#* }"
+    if [ -e "$target/$dstname" ]; then skipped+=("$dstname")
+    else cp "$ROOT/tools/templates/$srcname" "$target/$dstname"; copied=$((copied+1)); fi
+  done
+
+  # 6) opencode.json : le harness pointe le protocole DANS LE BUNDLE (chemin absolu, en /)
+  if [ -e "$target/opencode.json" ]; then skipped+=("opencode.json")
+  else
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"]\n}\n' "$(conf_path "$ROOT")" > "$target/opencode.json"
     copied=$((copied+1))
   fi
 
@@ -156,47 +195,15 @@ copy_kit() {
 }
 
 # ── Commandes ───────────────────────────────────────────────────────────────
-# Resync des fichiers GÉNÉRIQUES du kit vers le projet (zéro écrasement :
-# seuls les fichiers ABSENTS du projet sont copiés, y compris dans les dossiers existants).
-# update_kit <projet> <kit> → un chemin ajouté par ligne (relatif au projet)
-update_kit() {
-  local target="$1" kit="$2"
-  local f src dst rel mdir
-  # 1) Fichiers racine génériques (JAMAIS .gitignore = data du projet)
-  for f in AGENT-projet.md referentiel-templates-PM2.md opencode.json assistant.ps1 assistant.sh; do
-    src="$kit/$f"; dst="$target/$f"
-    if [ -f "$src" ] && [ ! -e "$dst" ]; then cp "$src" "$dst"; printf '%s\n' "$f"; fi
-  done
-  # 2) Dossiers de phases + checklists + docs + tools : les fichiers manquants (recursif)
-  local d
-  for d in "$kit"/*; do
-    [ -d "$d" ] || continue
-    local base; base="$(basename "$d")"
-    case "$base" in
-      0*|checklists|docs|tools) ;;
-      *) continue ;;
-    esac
-    dst="$target/$base"
-    if [ ! -d "$dst" ]; then
-      cp -R "$d" "$dst"
-      printf '%s/\n' "$base"
-      continue
-    fi
-    local sl="${d%/}"
-    find "$d" -type f | while IFS= read -r m; do
-      rel="${m#"$sl"/}"
-      if [ ! -e "$dst/$rel" ]; then
-        mdir="$(dirname "$dst/$rel")"
-        mkdir -p "$mdir"
-        cp "$m" "$dst/$rel"
-        printf '%s/%s\n' "$base" "$rel"
-      fi
-    done
-  done
-  # 3) .opencode/agent + command (fichiers manquants, recursif)
-  local sub
+# Resync du HARNESS opencode (remplace le resync du kit - WP-0025) :
+# zéro écrasement, seuls les fichiers ABSENTS du projet sont ajoutés.
+# deploy_harness <projet> <bundle> <meta> → un chemin ajouté par ligne (relatif au projet)
+deploy_harness() {
+  local target="$1" bundle="$2" meta="$3"
+  local sub src dst rel mdir
+  # 1) .opencode/agent + command (fichiers manquants, récursif)
   for sub in agent command; do
-    src="$kit/.opencode/$sub"
+    src="$bundle/.opencode/$sub"
     [ -d "$src" ] || continue
     dst="$target/.opencode/$sub"
     mkdir -p "$dst"
@@ -211,42 +218,153 @@ update_kit() {
       fi
     done
   done
+  # 2) opencode.json (créé si absent - JAMAIS écrasé : il pointe le bundle de CETTE machine)
+  local oc="$target/opencode.json"
+  if [ ! -e "$oc" ]; then
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"]\n}\n' "$(conf_path "$bundle")" > "$oc"
+    printf 'opencode.json\n'
+  fi
+  # 3) .gitignore : les lignes machine (append, jamais d'écrasement)
+  local gi="$target/.gitignore"
+  if [ ! -e "$gi" ]; then
+    if [ -f "$bundle/tools/templates/gitignore-projet.md" ]; then
+      cp "$bundle/tools/templates/gitignore-projet.md" "$gi"
+      printf '.gitignore\n'
+    fi
+  else
+    local added=""
+    grep -qE '^[[:space:]]*\.opencode/' "$gi" || added="${added}.opencode/
+"
+    grep -qF "$meta/registry/connexions.local.md" "$gi" || added="${added}${meta}/registry/connexions.local.md
+"
+    if [ -n "$added" ]; then
+      printf '%s' "$added" >> "$gi"
+      printf '.gitignore (append)\n'
+    fi
+  fi
   return 0
 }
 
-# cmd_update : resync du kit, lance DEPUIS le projet (dossier courant).
-cmd_update() {
+# cmd_sync (WP-0025 - remplace update) : le projet est MINCE - il n'y a plus de copie locale
+# de l'outillage à resynchroniser. sync vérifie : le bundle (référence + version + arrière
+# local git, best effort), la présence du lanceur mince + du bootstrap (ajout des absents),
+# et le harness opencode (ajout des manquants ; --force-harness pour régénérer).
+cmd_sync() {
+  local force="${1:-}"
   local p; p="$(pwd)"
   if [ ! -f "$p/projet.md" ] && [ ! -f "$p/$META/fiche.md" ]; then
     echo "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet — avec projet.md ou $META/)."
     return
   fi
-  # Origine du kit : ligne 'kit_source: <chemin>' dans <meta>/registry/connexions.md
-  local reg="$p/$META/registry/connexions.md"
-  local kit_src=""
-  if [ -f "$reg" ]; then
-    kit_src="$(grep -m1 -E '^[[:space:]]*kit_source:' "$reg" | sed -E 's/^[[:space:]]*kit_source:[[:space:]]*//')"
+  # Config de connexion du projet (partagée + machine) - même logique que le lanceur mince.
+  local meta="$META"
+  local shared="$p/$meta/registry/connexions.md"
+  local localf="$p/$meta/registry/connexions.local.md"
+  local mfcfg; mfcfg="$(grep -m1 -E '^[[:space:]]*meta_folder:' "$shared" 2>/dev/null | sed -E 's/^[[:space:]]*meta_folder:[[:space:]]*//')"
+  if [ -n "$mfcfg" ]; then
+    meta="$mfcfg"
+    shared="$p/$meta/registry/connexions.md"
+    localf="$p/$meta/registry/connexions.local.md"
   fi
-  if [ -z "$kit_src" ]; then
-    echo "Pas de 'kit_source' dans $reg — je ne sais pas d'où vient le kit."
-    echo "  Ajoute la ligne : kit_source: <chemin du kit>"
+  local ref; ref="$(grep -m1 -E '^[[:space:]]*assistant_ref:' "$shared" 2>/dev/null | sed -E 's/^[[:space:]]*assistant_ref:[[:space:]]*//')"
+  [ -z "$ref" ] && ref="latest"
+  local b; b="$(grep -m1 -E '^[[:space:]]*assistant_local:' "$localf" 2>/dev/null | sed -E 's/^[[:space:]]*assistant_local:[[:space:]]*//')"
+  if [ "$ref" != "latest" ] && [ -n "$b" ] && [ -d "$b/versions" ]; then b="$b/versions/$ref"; fi
+  if [ -z "$b" ] || [ ! -f "$b/assistant.sh" ] || [ ! -f "$b/.assistant.version" ]; then
+    echo ""
+    if [ -n "$b" ]; then echo "Pas de bundle valide sur cette machine (assistant_local : $b)."
+    else echo "Pas de bundle valide sur cette machine (assistant_local : (non défini))."; fi
+    echo "  -> lancer le bootstrap :  ./bootstrap.sh   (pointer / chercher / installer)"
     return
-  fi
-  if [ ! -f "$kit_src/assistant.ps1" ]; then
-    echo "Kit source introuvable ou invalide : $kit_src"
-    return
-  fi
-  echo ""; echo "Update du kit depuis : $kit_src"
-  echo "  (zéro écrasement : seuls les fichiers du kit manquants sont ajoutés)"
-  local added; added="$(update_kit "$p" "$kit_src")"
-  if [ -z "$added" ]; then
-    echo "  Déjà à jour — rien à ajouter."
-  else
-    local n; n="$(printf '%s\n' "$added" | grep -c .)"
-    echo "  $n éléments ajoutés :"
-    printf '%s\n' "$added" | while IFS= read -r a; do [ -n "$a" ] && echo "    + $a"; done
   fi
   echo ""
+  echo "sync - projet : $p"
+  echo "  Bundle  : $b"
+  local ver; ver="$(head -n1 "$b/.assistant.version" 2>/dev/null)"
+  printf '  Version : %s   (référence : %s)\n' "${ver:-?}" "$ref"
+  # Si le bundle est un repo git local : arrière local vs upstream (sans réseau, best effort).
+  if [ -d "$b/.git" ]; then
+    local behind
+    behind="$(git -C "$b" rev-list --count "HEAD..@{u}" 2>/dev/null | head -n1 || true)"
+    case "$behind" in
+      ''|*[!0-9]*) : ;;
+      0) : ;;
+      *) echo "  NB : le bundle est $behind commit(s) arrière de son upstream local (git pull possible - c'est à toi de le faire)." ;;
+    esac
+  fi
+  # 2) Présence du lanceur mince + du bootstrap (ajout des absents seulement).
+  local f src addedfiles=""
+  for f in assistant.ps1 assistant.sh bootstrap.ps1 bootstrap.sh; do
+    case "$f" in
+      assistant.ps1) src="lanceur-assistant.ps1" ;;
+      assistant.sh) src="lanceur-assistant.sh" ;;
+      bootstrap.ps1) src="bootstrap-assistant.ps1" ;;
+      bootstrap.sh) src="bootstrap-assistant.sh" ;;
+    esac
+    if [ -f "$b/tools/templates/$src" ] && [ ! -e "$p/$f" ]; then
+      cp "$b/tools/templates/$src" "$p/$f"
+      addedfiles="${addedfiles}${addedfiles:+, }$f"
+    fi
+  done
+  [ -n "$addedfiles" ] && echo "  Lanceur : ajoutés (absents) - $addedfiles"
+  # 3) Le harness opencode
+  local ocagent="$p/.opencode/agent/assistant-projet.md"
+  local ocjson="$p/opencode.json"
+  local need=0
+  { [ ! -f "$ocagent" ] || [ ! -f "$ocjson" ]; } && need=1
+  if [ "$force" = "--force-harness" ]; then
+    echo "  Harness : --force-harness -> régénération depuis le bundle (remplace .opencode/agent+command + opencode.json)."
+    printf '  Confirmer ? (o/n) '
+    local a; IFS= read -r a || a=""
+    case "$a" in
+      o|O|oui|Oui|yes|YES|y|Y)
+        rm -rf "$p/.opencode/agent" "$p/.opencode/command" "$ocjson"
+        local out; out="$(deploy_harness "$p" "$b" "$meta")"
+        if [ -n "$out" ]; then
+          while IFS= read -r x; do [ -n "$x" ] && printf '    + %s\n' "$x"; done <<< "$out"
+        fi
+        ;;
+      *) echo "  Annulé." ;;
+    esac
+  elif [ $need -eq 1 ]; then
+    echo "  Harness : incomplet/absent (à ajouter, zéro écrasement) :"
+    [ -f "$ocagent" ] || echo "    + .opencode/agent/ + .opencode/command/  (copies du bundle)"
+    [ -f "$ocjson" ] || echo "    + opencode.json  (instructions -> AGENT-projet.md du bundle + projet.md)"
+    echo "    + .gitignore  (lignes machine, en append)"
+    printf '  Déployer ? (o/n) '
+    local a2; IFS= read -r a2 || a2=""
+    case "$a2" in
+      o|O|oui|Oui|yes|YES|y|Y)
+        local out2; out2="$(deploy_harness "$p" "$b" "$meta")"
+        if [ -n "$out2" ]; then
+          while IFS= read -r x; do [ -n "$x" ] && printf '    + %s\n' "$x"; done <<< "$out2"
+        fi
+        ;;
+      *) echo "  Passé - à refaire :  ./assistant.sh sync" ;;
+    esac
+  else
+    echo "  Harness : déployé."
+  fi
+  echo ""
+  echo "  sync OK."
+  if [ "$ref" = "latest" ]; then
+    echo "  (Pour figer une version : assistant_ref: <version> dans $shared - le projet migre quand il le sent.)"
+  fi
+}
+
+# cmd_bootstrap (WP-0025) : lance le bootstrap DU PROJET (rétablit le bundle sans IA :
+# pointer / chercher / installer + le harness opencode).
+cmd_bootstrap() {
+  local p; p="$(pwd)"
+  if [ ! -f "$p/projet.md" ] && [ ! -f "$p/$META/fiche.md" ]; then
+    echo "Tu n'es pas dans un projet (relancer depuis le dossier d'un projet)."
+    return
+  fi
+  if [ -f "$p/bootstrap.sh" ]; then
+    bash "$p/bootstrap.sh" "$@"
+  else
+    echo "bootstrap.sh absent dans $p (projet incomplet - relancer l'add sur ce dossier)."
+  fi
 }
 
 cmd_scan() {
@@ -262,8 +380,8 @@ cmd_scan() {
     [ -z "$r" ] && continue
     echo ""; echo "=== $r ==="
     if [ ! -d "$r" ]; then echo "  (racine absente)"; continue; fi
-    local k_n=0 p_n=0 po_n=0 pl_n=0
-    local kits="" parts="" pourrs="" plain=""
+    local mi_n=0 le_n=0 p_n=0 po_n=0 pl_n=0
+    local mince="" legacy="" parts="" pourrs="" plain=""
     local d
     while IFS= read -r d; do
       [ -z "$d" ] && continue
@@ -272,9 +390,16 @@ cmd_scan() {
       [ -f "$d/projet.md" ] && hasP=1
       [ -f "$d/AGENT-projet.md" ] && hasA=1
       [ -d "$d/$META" ] && hasM=1
-      if [ $hasP -eq 1 ] && [ $hasA -eq 1 ]; then
-        kits="${kits}${n}
-"; k_n=$((k_n+1))
+      if [ $hasP -eq 1 ] && [ $hasM -eq 1 ]; then
+        # Assiste (WP-0025) : data (projet.md) + meta.
+        # "mince" = l'outillage est dans le bundle ; "copie complete" = legacy (pre-WP-0025).
+        if [ $hasA -eq 1 ]; then
+          legacy="${legacy}${n}
+"; le_n=$((le_n+1))
+        else
+          mince="${mince}${n}
+"; mi_n=$((mi_n+1))
+        fi
       elif [ $hasP -eq 1 ] || [ $hasA -eq 1 ] || [ $hasM -eq 1 ]; then
         parts="${parts}${n}
 "; p_n=$((p_n+1))
@@ -291,15 +416,22 @@ cmd_scan() {
       fi
     done < <(find "$r" -mindepth 1 -maxdepth 1 -type d ! -name '.*' 2>/dev/null | sort)
 
-    if [ $k_n -gt 0 ]; then
+    if [ $((mi_n+le_n)) -gt 0 ]; then
       echo "  [Assistés]"
       while IFS= read -r n; do
         [ -z "$n" ] && continue
         local fm_phase fm_gate
         fm_phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
         fm_gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
-        printf '    + %s  -  phase %s, gate %s\n' "$n" "${fm_phase:-?}" "${fm_gate:-?}"
-      done <<< "$kits"
+        printf '    + %s  -  phase %s, gate %s   (mince)\n' "$n" "${fm_phase:-?}" "${fm_gate:-?}"
+      done <<< "$mince"
+      while IFS= read -r n; do
+        [ -z "$n" ] && continue
+        local fm_phase fm_gate
+        fm_phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        fm_gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        printf '    + %s  -  phase %s, gate %s   (copie complete, pre-WP-0025)\n' "$n" "${fm_phase:-?}" "${fm_gate:-?}"
+      done <<< "$legacy"
     fi
     if [ $p_n -gt 0 ]; then
       echo "  [À compléter]"
@@ -309,9 +441,10 @@ cmd_scan() {
         [ -f "$r/$n/projet.md" ] && hP=1
         [ -f "$r/$n/AGENT-projet.md" ] && hA=1
         [ -d "$r/$n/$META" ] && hM=1
-        local detail="kit partiel"
+        local detail="partiel (projet.md + $META/ attendus)"
         if [ $hM -eq 1 ] && [ $hP -eq 0 ]; then detail="projet sans code (ne contient que $META) -> assistant add"
-        elif [ $hM -eq 1 ]; then detail="kit partiel (manque AGENT-projet.md)"
+        elif [ $hP -eq 1 ] && [ $hM -eq 0 ]; then detail="manque $META/ -> assistant add"
+        elif [ $hA -eq 1 ] && [ $hP -eq 0 ]; then detail="copie du kit sans projet.md -> assistant add"
         fi
         printf '    ~ %s  -  %s\n' "$n" "$detail"
       done <<< "$parts"
@@ -328,14 +461,14 @@ cmd_scan() {
       echo "  [Sans signal]"
       while IFS= read -r n; do [ -n "$n" ] && printf '    . %s\n' "$n"; done <<< "$plain"
     fi
-    local total=$((k_n+p_n+po_n+pl_n))
-    printf '  -> %d dossiers : %d assistés, %d à compléter, %d pourraient, %d sans signal\n' "$total" "$k_n" "$p_n" "$po_n" "$pl_n"
-    tk=$((tk+k_n)); tp=$((tp+p_n)); tpo=$((tpo+po_n)); tpl=$((tpl+pl_n))
+    local total=$((mi_n+le_n+p_n+po_n+pl_n))
+    printf '  -> %d dossiers : %d assistés, %d à compléter, %d pourraient, %d sans signal\n' "$total" "$((mi_n+le_n))" "$p_n" "$po_n" "$pl_n"
+    tk=$((tk+mi_n+le_n)); tp=$((tp+p_n)); tpo=$((tpo+po_n)); tpl=$((tpl+pl_n))
   done <<< "$roots"
   echo ""
   printf 'Total : %d dossiers - %d assistés, %d à compléter, %d pourraient, %d sans signal\n' "$((tk+tp+tpo+tpl))" "$tk" "$tp" "$tpo" "$tpl"
   echo "Travailler sur un projet :  assistant commence <nom>   (ou, dans opencode : « commence le projet <nom> »)"
-  echo "Ajouter le kit à un dossier :  assistant add <dossier>   (jamais d'écrasement)"
+  echo "Ajouter l'assistant (mince) à un dossier :  assistant add <dossier>   (jamais d'écrasement)"
 }
 
 # liste_projects : la liste des projets (nom + phase + gate) - WP-0024.
@@ -475,20 +608,24 @@ cmd_new() {
   mkdir -p "$target"
   local skipfile; skipfile="$(mktemp)"
   local copied
-  copied="$(copy_kit "$target" "$name" "$skipfile")"
+  copied="$(deploy_kit "$target" "$name" "$skipfile")"
   local nsk; nsk="$(grep -c . "$skipfile" 2>/dev/null || true)"
   echo ""; echo "Projet créé : $target"
   echo "  $copied éléments copiés, ${nsk:-0} ignorés."
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
   echo ""
+  echo "  Le projet est MINCE : la doc (projet.md, 01..05, _meta) + la config de connexion + le lanceur + le bootstrap."
+  echo "  L'outillage (protocole, templates, checklists, harness) vit dans le bundle (le repo assistant), pointé par $META/registry/connexions.md."
+  echo ""
   echo "  Méthode PM2 : 4 phases (Lancement → Planification → Exécution → Clôture), chacune clôturée par un gate (checklist)."
   echo "  On attaque par la Lancement. Une phase peut être sautée, mais le statut le signalera ensuite — à faire par maîtrise ou curiosité."
   echo ""
   echo "  Prochain pas : aller dans le projet et lancer l'agent :"
   echo "    cd $target"
-  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
+  echo "    opencode   (l'agent lit le protocole via opencode.json → annonce la phase + gate : C'EST LE TEST)"
   echo "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  Vérifier le bundle + le harness :  ./assistant.sh sync   (depuis le projet)"
   echo "  Une remarque sur le kit ? Note-la :  assistant remark '...'  (depuis le projet, remonte au projet assistant)"
   echo "  (ou, sans ouvrir opencode : assistant commence ${name})"
 }
@@ -512,20 +649,24 @@ cmd_add() {
   fi
   local skipfile; skipfile="$(mktemp)"
   local copied
-  copied="$(copy_kit "$target" "$(basename "$target")" "$skipfile")"
+  copied="$(deploy_kit "$target" "$(basename "$target")" "$skipfile")"
   local nsk; nsk="$(grep -c . "$skipfile" 2>/dev/null || true)"
-  echo ""; echo "Kit ajouté : $target"
+  echo ""; echo "Assistant ajouté (mince) : $target"
   echo "  $copied éléments copiés, ${nsk:-0} ignorés."
   while IFS= read -r s; do [ -n "$s" ] && echo "  - ignoré (pré-existant) : $s"; done < "$skipfile"
   rm -f "$skipfile"
+  echo ""
+  echo "  Le projet est MINCE : la doc (projet.md, 01..05, _meta) + la config de connexion + le lanceur + le bootstrap."
+  echo "  L'outillage (protocole, templates, checklists, harness) vit dans le bundle (le repo assistant), pointé par $META/registry/connexions.md."
   echo ""
   echo "  Méthode PM2 : 4 phases (Lancement → Planification → Exécution → Clôture), chacune clôturée par un gate (checklist)."
   echo "  On attaque par la Lancement. Une phase peut être sautée, mais le statut le signalera ensuite — à faire par maîtrise ou curiosité."
   echo ""
   echo "  Prochain pas : aller dans le projet et lancer l'agent :"
   echo "    cd $target"
-  echo "    opencode   (l'agent lit AGENT-projet.md → annonce la phase + gate : C'EST LE TEST)"
+  echo "    opencode   (l'agent lit le protocole via opencode.json → annonce la phase + gate : C'EST LE TEST)"
   echo "  Puis tester :  /ap-statut-projet   (phase + gate + avancement)  -  et dire : « commence le projet »"
+  echo "  Vérifier le bundle + le harness :  ./assistant.sh sync   (depuis le projet)"
   echo "  (ou, sans ouvrir opencode : assistant commence $(basename "$target"))"
 }
 
@@ -577,16 +718,17 @@ show_menu() {
   PM2 : Lancement → Planification → Exécution → Clôture  (1 gate = 1 checklist par phase)
 ================================================
   -- Gérer les projets (depuis le kit ou les racines) --
-  scan                 les projets des racines : assistés / pourraient / sans signal
+  scan                 les projets des racines : assistés (mince / copie complète) / pourraient / sans signal
   liste                les projets (nom + phase + gate)
   statut <projet>      phase + gate + avancement d'un projet par son nom
-  new <nom> [racine] [-doc]   créer un projet  (-doc = SEUL _meta, sans kit : projet sans code)
-  add <dossier>        ajouter le kit à un projet existant (jamais d'écrasement)
+  new <nom> [racine] [-doc]   créer un projet MINCE  (-doc = SEUL _meta, sans outillage : projet sans code)
+  add <dossier>        ajouter l'assistant (mince) à un projet existant (jamais d'écrasement)
   install.sh           (re)initialiser la config transversale (racines, connexions)
 
   -- Dans un projet (depuis le dossier du projet) --
   statut               le statut du projet courant (sans argument)
-  update               resync le kit de CE projet (zéro écrasement)
+  sync [--force-harness]  vérifier le bundle (version) + le harness opencode (remplace update - WP-0025)
+  bootstrap          (ré)installer le bundle sur cette machine : pointer / chercher / installer + harness
   remark <texte>       journal des remarques au vol (remontée au projet assistant)
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
   menu / ?             ce menu
@@ -610,9 +752,11 @@ case "$c" in
     cmd_new "$nname" "$nroot" "$ndoc" ;;
   add) cmd_add "${2:-}" ;;
   liste) liste_projects ;;
-  update) cmd_update ;;
+  sync) cmd_sync "${2:-}" ;;
+  update) echo "update est devenu sync (WP-0025 : projet mince - plus de copie locale à resynchroniser)"; cmd_sync "${2:-}" ;;
+  bootstrap) shift; cmd_bootstrap "$@" ;;
   remark) cmd_remark "${2:-}" ;;
   commence) cmd_commence "${2:-}" ;;
   menu|"\?") show_menu ;;
   *) echo "Commande inconnue : $c"; show_menu ;;
-esac                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+esac

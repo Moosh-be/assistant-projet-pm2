@@ -1,12 +1,12 @@
-# assistant-projet-pm2 — PM² project setup assistant (Markdown kit)
+# assistant-projet-pm2 — PM² project setup assistant (the bundle — thin projects)
 
-> **What this is** : a **Markdown kit + AI-agent protocol** that helps you **set up and run a project following PM²** (v3.0.1). One project = one folder, one AI-readable routing note, one template per PM² artefact, one checklist per phase gate.
+> **What this is** : a **Markdown assistant + AI-agent protocol** that helps you **set up and run a project following PM²** (v3.0.1). **The project is THIN** : the project = the **data** (one folder : `projet.md`, the `01..05` phases, `_meta`) ; the **tooling** (templates, checklists, protocol, agent harness) = **this repo, the « bundle »**, pointed to by the project's connection config. A project synced to a third party carries only the docs + the config + a thin launcher + a bootstrap that re-establishes the link to the bundle **without AI** (point / search / install, announcing + confirming every action).
 >
 > **The idea** : the assistant **asks you the questions** (phase by phase) so the PM² artefacts get filled — and, over time, **listens to your exchanges** (mails, meetings, conversations) to **propose** what to put where. *Asking is also a way to teach you to ask yourself the question.*
 >
 > **Default stack** : any AI agent that reads a folder (**opencode** by default — "the hammer") + any Markdown vault manager (**Obsidian** by default — "the vault").
 >
-> **Principle** : *whatever can be done without AI is done without AI.* The native script (`assistant.ps1` / `assistant.sh`) does the deterministic work (scanning, classifying, reading frontmatter, copying the kit) ; the agent only reasons where it truly matters : **driving** (mode B), **listening** (mode C), **deciding** (add-ons).
+> **Principle** : *whatever can be done without AI is done without AI.* The native script (`assistant.ps1` / `assistant.sh`) does the deterministic work (scanning, classifying, reading frontmatter, **deploying the thin project**, pointing to the bundle) ; the agent only reasons where it truly matters : **driving** (mode B), **listening** (mode C), **deciding** (add-ons).
 
 <p align="center">
 🇫🇷 <a href="./README.fr.md">Français</a> &nbsp;|&nbsp; 🇬🇧 <b>English</b>
@@ -21,45 +21,45 @@
 2. The native menu (no AI : fast, free) :  assistant.ps1 (Windows) · assistant.sh (macOS/Linux)
      scan               → your existing projects : list in 3 buckets (assisted / could be / no signal)
      statut <project>   → where a project stands (phase + gate + progress)
-     new <name>         → create a project (kit + fresh _meta)
-     add <folder>       → add the kit to an existing project (never overwrites)
+     new <name>         → create a THIN project (docs + connection config + launcher + bootstrap)
+     add <folder>       → add the assistant (thin) to an existing project (never overwrites)
+     sync               → (from a project) check the bundle (version) + the opencode harness (replaces update)
+     bootstrap          → (from a project) (re)install the bundle : point / search / install + harness
      commence <name>    → THE AGENT : opens opencode in the project (driving, mode B/C)
 3. In the agent (opencode) :
      /ap-scan-projets                 → the native scan, presented and driven by the agent
      /ap-statut-projet                → native status (phase + gate + progress)
      "start the project <Name>"  → start / resume a PM² project
-     "create a project <Name>"   → new project (kit + Lancement phase)
+     "create a project <Name>"   → new THIN project (docs + Lancement phase ; the tooling stays in the bundle)
 4. Tip : existing projects ? start with scan. Otherwise : create your first project.
 ```
 > Already organized your projects (e.g. `code/github/…` + `code/gitlab/…`)? Keep it that way :
-> the kit works on **project roots** (multiple folders), it does not ask for a monolithic vault.
+> the assistant works on **project roots** (multiple folders), it does not ask for a monolithic vault.
 
 Full walkthrough → [`docs/prise-en-main.md`](docs/prise-en-main.md) · install details → [`docs/install.md`](docs/install.md)
 
-## The kit (folder layout)
+## The bundle (folder layout)
 ```
-assistant.ps1          ← NATIVE entry point (no AI, no dependency) : scan, statut, new, add, commence
-assistant.sh           ← macOS / Linux equivalent
-install.ps1 / install.sh ← install wizard (1×) : cross-cutting config (env, opencode, roots, connections)
-AGENT-projet.md        ← THE AI routing note (read first). Phase, due artefacts, checklists, connections.
-projet.md              ← project sheet / master file (machine frontmatter + phase status)
-01 Lancement/          ← PM2-01/02/03 (→ gate RfP)
-02 Planification/      ← PM2-04 … PM2-16 (→ gate RfE)
-03 Exécution/          ← PM2-18 + deliverables
-04 Suivi-Controle/     ← PM2-19/21/22 + PM2-27 phase-exit checklists
-05 Cloture/            ← PM2-33 (→ gate RfC)
-checklists/            ← per gate (RfP/RfE/RfC) and per role (sponsor/BM/CP)
-tools/                 ← gen_templates.py (regenerate the artefact skeletons)
-docs/                  ← onboarding + install (hammer / vault)
-_meta/               ← INCEPTION : the repo developed as its own PM² project
-                         (fiche.md + backlog/ 1 file = 1 work package → exportable
-                         to SuperProductivity / OpenProject, logs/, report/, registry/)
+assistant.ps1 / assistant.sh ← THE NATIVE ENGINE of the bundle (no AI, no dependency) : scan, statut, new, add, sync, bootstrap, commence
+install.ps1 / install.sh     ← install wizard (1×) : cross-cutting config (env, opencode, roots, connections)
+.assistant.version           ← the bundle version (the marker the bootstrap searches for on disk)
+versions/                    ← pinned bundle versions (assistant_ref: <version> → versions/<version>/)
+AGENT-projet.md              ← THE AI routing note — the thin project points to it via its opencode.json
+projet.md                    ← the project-sheet template (pre-filled at creation : name + date)
+01..05/                      ← the PM² phases (here : the meta-project data ; in a created project : empty, the data is written there)
+checklists/                  ← per gate (RfP/RfE/RfC) and per role (sponsor/BM/CP)
+referentiel-templates-PM2.md ← the PM² templates mapping
+tools/                       ← templates/ (the thin-project skeletons : launcher, bootstrap, gitignore, sheet) + gen_templates.py
+docs/                        ← onboarding + install (hammer / vault)
+_meta/                       ← INCEPTION : the repo developed as its own PM² project
 ```
+> ⭐ **The project is THIN** : `assistant new` creates a project containing only the **docs** (`projet.md`, `01..05`, `_meta`), the **connection config** (`_meta/registry/connexions.md` shared + `connexions.local.md` machine), the **thin launcher** (`assistant.ps1/.sh`) and the **bootstrap** (`bootstrap.ps1/.sh`). Everything else — templates, checklists, protocol, `.opencode/` harness — **stays in the bundle**. That's why a project synced to a third party stays readable, and that's why the bootstrap exists : **without AI**, it re-establishes the link to the bundle (point / search / install), **announcing + confirming every action**, then proposes the opencode harness.
+> **Versioning** : no breaking changes. If a breaking change is ever unavoidable, the bundle carries **all** versions (`versions/<ref>/`, the old ones = retro-compatible) and each project migrates **when it feels ready** (`assistant_ref: <version>` in its shared config).
 > `_` prefix = "meta" artefact of the repo, not a PM² phase folder.
 > ⚠️ **Naming rule** : the AI routing note is deliberately named `AGENT-projet.md`, **never `AGENTS.md`** — in agent-tool ecosystems an `AGENTS.md` is auto-loaded and would hijack whatever global context you have. The skill/protocol reads `AGENT-projet.md` explicitly.
 
 ## The inception layer (`_meta/`)
-> ⭐ **This kit uses itself** (inception). In `_meta/` you find **exactly what happens when the assistant is used on a project** : the sheet, the backlog (1 file = 1 work package), the session journal, the registries. The kit filling its own documentation — a real example, not a mockup.
+> ⭐ **This bundle uses itself** (inception). In `_meta/` you find **exactly what happens when the assistant is used on a project** : the sheet, the backlog (1 file = 1 work package), the session journal, the registries. The bundle filling its own documentation — a real example, not a mockup.
 
 `_meta/` holds the state of the repo as a project:
 - `fiche.md` — project sheet of the repo (frontmatter = truth for the meta layer)
