@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-04 (v18 : WP-0025 — politique de versionnage tranchée : pas de breaking change, bundle cumulatif, migration au rythme du projet)"
+mis_a_jour: "2026-11-06 (PM2-01/02/03 affinés après validations du 06/11 — reste : go formel + rôle challengers → check RfP)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -39,6 +39,8 @@ mis_a_jour: "2026-11-04 (v18 : WP-0025 — politique de versionnage tranchée : 
 | **Planification** | WP-0025 (tracé) | 0/1 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
+
+> Artefacts PM² de la phase Lancement (racine) : **PM2-01/02/03 = 3/3 en cours** — pré-remplis en mode A le 05/11 depuis `fiche.md` + `decisions.md`, avec `[À confirmer]` + source sur les champs présumés. Le check RfP passe après validation des `[À confirmer]`.
 
 ### WPs ouverts (a-faire / en-cours)
 | WP | Statut | Priorité |

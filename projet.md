@@ -36,7 +36,7 @@ créé: ""
 ## 3. État de la phase (mis à jour par l'assistant à chaque artefact rempli)
 | Phase | Artefacts dus | Fait | Check du gate |
 |---|---|---|---|
-| **Lancement** | PM2-01 · PM2-02 · PM2-03 | 0/3 | ☐ RfP (checklist) |
+| **Lancement** | PM2-01 · PM2-02 · PM2-03 | 3/3 (en cours — à confirmer) | ☐ RfP (checklist) |
 | **Planification** | PM2-04 → PM2-16 (envisagés) | 0/? | ☐ RfE |
 | **Exécution** | PM2-18 + livrables | 0/? | — |
 | **Suivi & Contrôle** | PM2-19/22 · PM2-21 | — | — |
