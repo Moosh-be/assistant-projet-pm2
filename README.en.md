@@ -66,6 +66,27 @@ _meta/                       ← INCEPTION : the repo developed as its own PM² 
 - `backlog/` — **1 file = 1 work package** (universal frontmatter, transformable into a ticket — see `_meta/backlog/README.md`)
 - `logs/` · `report/` · `registry/` — session journal, periodic reports, registers
 
+## The 3 usage modes (resilient degradation)
+The assistant is driven at **3 levels**, **each working standalone** — you lose capabilities going down, **never the data** :
+
+| Mode | Needs | What it does |
+|---|---|---|
+| **1 — File** | nothing (a plain drive works) | data only : bundle templates copied by hand, `projet.md` / `01..05` / `_meta` filled by hand |
+| **2 — Native execution** | the bundle + PowerShell/bash (**no AI, no internet**) | the project's thin launcher (the « relay ») delegates to the bundle engine : `scan`, `statut`, `liste`, `new`, `add`, `sync`, `remark`, `bootstrap` |
+| **3 — AI** | opencode (or any agent that reads the folder) | the agent session applies the `AGENT-projet.md` protocol — **synchronous** (chat) or **asynchronous** (notes as text files → isolated discussions, WP-0027) |
+
+- **The scale** : AI → native → file. AI unavailable → native level ; bundle unavailable → file level. The data stays readable and editable at every level.
+- **Climbing back up** : the project's `bootstrap` (e.g. at a third party, from a bare copy) re-establishes the link to the bundle — point / search / install — **without AI**, announcing + confirming every action.
+
+> Do not confuse with the « 3 feeding modes » (A/B/C, below) : those say **how data gets into** the artefacts ; these say **at which level you drive the assistant**.
+
+### In the AI mode — agent, command, skill
+| | What it is | Example |
+|---|---|---|
+| **agent** | **who talks** : the AI's identity and role — the `AGENT-projet.md` protocol is loaded as primary | `assistant-projet` |
+| **command** | **what you trigger** by name (slash-command) — a bridge to the native engine when it can run without AI | `/ap-scan-projets`, `/ap-statut-projet` |
+| **skill** | **how to do X well** : a procedure module loaded on demand when the task matches it | (coming) |
+
 ## The 3 feeding modes
 | Mode | What happens |
 |---|---|

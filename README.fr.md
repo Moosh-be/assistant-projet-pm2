@@ -66,6 +66,27 @@ _meta/                       ← INCEPTION : le repo mené comme son propre proj
 - `backlog/` — **1 fichier = 1 package de travail** (frontmatter universel, transformable en ticket — voir `_meta/backlog/README.md`)
 - `logs/` · `report/` · `registry/` — journal de session, rapports périodiques, registres
 
+## Les 3 modes d'utilisation (dégradation résiliente)
+L'assistant se pilote à **3 niveaux**, **chacun fonctionnel seul** — on perd des capacités à chaque cran vers le bas, **jamais les données** :
+
+| Mode | A besoin de | Ce que ça fait |
+|---|---|---|
+| **1 — Fichier** | rien (un simple drive suffit) | la data seule : templates du bundle copiés à la main, `projet.md` / `01..05` / `_meta` remplis à la main |
+| **2 — Exécution natif** | le bundle + PowerShell/bash (**sans IA, sans internet**) | le lanceur mince du projet (le « relai ») délègue au moteur du bundle : `scan`, `statut`, `liste`, `new`, `add`, `sync`, `remark`, `bootstrap` |
+| **3 — IA** | opencode (ou tout agent qui lit le dossier) | la session agent applique le protocole `AGENT-projet.md` — **synchrone** (chat) ou **asynchrone** (notes en fichiers texte → discussions isolées, WP-0027) |
+
+- **L'échelle** : IA → natif → fichier. L'IA indisponible → cran natif ; le bundle indisponible → cran fichier. Les données restent lisibles et modifiables à chaque cran.
+- **Remonter l'échelle** : le `bootstrap` d'un projet (ex. chez un tiers, depuis une copie bare) retablit le lien vers le bundle — pointer / chercher / installer — **sans IA**, annonce + confirmation à chaque action.
+
+> Ne pas confondre avec les « 3 modes d'**alimentation** » (A/B/C, plus bas) : ceux-là disent **comment la donnée entre** dans les artefacts ; ceux-ci disent **à quel niveau on pilote l'assistant**.
+
+### Dans le mode IA — agent, command, skill
+| | C'est quoi | Exemple |
+|---|---|---|
+| **agent** | **qui parle** : l'identité et le rôle de l'IA — le protocole `AGENT-projet.md` est chargé comme primary | `assistant-projet` |
+| **command** | **ce qu'on déclenche** par nom (slash-commande) — pont vers le moteur natif quand c'est faisable sans IA | `/ap-scan-projets`, `/ap-statut-projet` |
+| **skill** | **comment faire X bien** : un module de procédure chargé à la demande quand la tâche y correspond | (à venir) |
+
 ## Les 3 modes d'alimentation
 | Mode | Ce qui se passe |
 |---|---|

@@ -6,6 +6,8 @@
 ## 0. Le principe en une phrase
 **Un projet MINCE = sa data** (`projet.md`, les phases `01..05`, `_meta/`) **+ un pointeur vers le bundle** (l'outillage : templates, checklists, protocole, `AGENT-projet.md`) via `_meta/registry/connexions.md` ; l'agent lit la note de routage **dans le bundle** (pointée par le `opencode.json` du projet), voit **la phase courante**, et **interroge** pour remplir les artefacts du template PM² **un par un**, dans l'ordre des gates.
 
+**Les 3 modes d'utilisation** (chacun fonctionnel seul, dégradation résiliente — détail dans le [README](../README.fr.md)) : **fichier** (manipulation de la data — un simple drive suffit) → **exécution natif** (le lanceur mince du projet délègue au moteur du bundle — sans IA, sans internet) → **IA** (session opencode, synchrone ou asynchrone). On perd des capacités en descendant, **jamais les données** ; le `bootstrap` remonte l'échelle depuis une copie bare.
+
 ## 1. Les 3 rôles
 | Rôle | Qui | Fait quoi |
 |---|---|---|
