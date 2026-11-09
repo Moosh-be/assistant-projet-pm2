@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-09 (v21 : WP-0026 fait à 100 % — docs « 3 modes d'utilisation » rédigées le 09/11 (README fr/en + prise-en-main) sur la décision du 08/11 · WP-0027 tracé (brouillon v0) ; reste RfP : go formel + rôle challengers → check RfP)"
+mis_a_jour: "2026-11-09 (v23 : GO formel RfP consigné (sponsor ctg) + WP-0033 fait — 2 copies dev/usage (clone `assistant-projet-pm2-bundle` ; renummé de 0029, collision série portefeuille) + WP-0034 tracé — contrainte protectrice « cumul de rôles » (casquette obligatoire, séparer les personnes physiques au plus vite ; cumul = charge mentale, pas de charge de travail) · v22 : WP-0028→0032 tracés — série « portefeuille » : scope multi-niveaux (pf/pgm/prj/prd/srv/vs), attributs + flag « assisté », connecteurs de synchro, portabilité OpenProject, rapprochement 2ndB « assistant d'organisation » · v21 : WP-0026 fait à 100 % (docs 09/11) · WP-0027 tracé (brouillon v0) ; reste RfP : demandeur du mandat (PM2-01 §5), rôles (challengers + fiche §2 — cadre de séparation posé 09/11), dates comités (PM2-03 §4), réponse aux risques (PM2-03 §5), MOE)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -36,7 +36,7 @@ mis_a_jour: "2026-11-09 (v21 : WP-0026 fait à 100 % — docs « 3 modes d'utili
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
 | **Lancement** | WP-0001 → 0024 (24) | 14/24 | ☐ RfP |
-| **Planification** | WP-0025 · WP-0026 · WP-0027 | 2/3 | ☐ RfE |
+| **Planification** | WP-0025 → 0033 (9) | 3/9 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
 
@@ -65,6 +65,13 @@ mis_a_jour: "2026-11-09 (v21 : WP-0026 fait à 100 % — docs « 3 modes d'utili
 | [WP-0025](backlog/WP-0025-projet-mince-bootstrap.md) — le projet mince : séparation data/outillage + bootstrap (annonce + confirmation, local → disque → clone, puis opencode) | **fait** (05/11 : code PS+bash + docs, tests T1-T7 verts ; mergé vers master le 07/11) | haute |
 | [WP-0026](backlog/WP-0026-trois-modes-utilisation.md) — doc : les 3 modes d'utilisation (fichier / natif / IA) + dégradation résiliente + agent/command/skill | **fait** (08/11 : décision + docs README fr/en + prise-en-main) | moyenne |
 | [WP-0027](backlog/WP-0027-mode-asynchrone-notes-discussions.md) — mode asynchrone : espace de notes (listes de points, marqueur de séparation) découpé en discussions isolées (split standalone + session opencode par item) | a-faire (brouillon v0 à raffiner) | moyenne |
+| [WP-0028](backlog/WP-0028-scope-portefeuille-multi-niveaux.md) — scope multi-niveaux : niveau **portefeuille (pf)** + pgm/prj/prd/srv/vs (identifier, pas gérer) | a-faire | moyenne |
+| [WP-0029](backlog/WP-0029-attributs-portefeuille-flag-assiste.md) — portefeuille : attributs (multiples, méthode, position, master) + **flag « assisté »** par projet | a-faire | **haute** |
+| [WP-0030](backlog/WP-0030-connecteurs-synchro-portefeuille.md) — connecteurs de **synchronisation** avec le portefeuille (lieu master) | a-faire | basse |
+| [WP-0031](backlog/WP-0031-portabilite-openproject-skills-agents.md) — **portabilité OpenProject** : skills/agents réutilisables sans l'assistant | a-faire | moyenne |
+| [WP-0032](backlog/WP-0032-rapprochement-assistant-organisation-2ndb.md) — **rapprochement** avec le projet 2ndB « assistant d'organisation » | a-faire | basse |
+| [WP-0033](backlog/WP-0033-deux-copies-dev-usage.md) — 2 copies du repo : dev (inception, dirty OK) / usage (bundle stable que les projets pointent, refresh délibéré) | **fait** (09/11 : clone `assistant-projet-pm2-bundle` + configs machine + décision ; renummé de WP-0029 — collision série portefeuille) | moyenne |
+| [WP-0034](backlog/WP-0034-contrainte-protectrice-cumul-roles.md) — contrainte protectrice cumul de rôles : casquette obligatoire (clarifier ou confirmer la déduction) + séparer les personnes physiques au plus vite | a-faire (brouillon à raffiner) | haute |
 
 ## 4. Les plans de gestion envisagés (anti-surcharge)
 | Document | Statut : envisagé / utilisé / ignoré | Pourquoi |

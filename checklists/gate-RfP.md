@@ -9,7 +9,7 @@
 - [ ] **PM2-03** Charte du projet — complétée, approuvée par le Sponsor
 
 ## Décision & rôles
-- [ ] **Go/no-go** décidé par le Sponsor (date + décision consignée)
+- [x] **Go/no-go** décidé par le Sponsor (date + décision consignée) — GO, ctg, 2026-11-09 (PM2-03 §7)
 - [ ] **Sponsor** identifié **et actif**
 - [ ] **Business Manager** identifié (représentant du Sponsor au quotidien)
 - [ ] **Chef de projet / gestionnaire** désigné

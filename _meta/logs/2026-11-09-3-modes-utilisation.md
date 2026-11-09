@@ -45,3 +45,36 @@ et celle du 09/11 (docs) — aucun log n'avait été écrit depuis `2026-11-05-p
 - **WP-0028** : go / non-go.
 - **Re-`add` `2ndb-toolbox`** (zéro écrasement, restera « copie complète »).
 - **Test terrain WP-0023** : relancer opencode → `/ap-statut-projet`.
+
+## Suite de la session 09/11 — GO formel RfP + 2 copies (WP-0029)
+- **GO formel RfP** : prononcé par le sponsor (ctg) le 09/11, après explication
+  de ce qu'est un go (acte de décision **daté et consigné** par le sponsor —
+  habilitation + redevabilité + date de référence ; pas un interrupteur, le
+  projet tournait déjà). Consigné : PM2-01 §7, PM2-03 §7, `decisions.md`,
+  checklist `gate-RfP.md` (item « Go/no-go décidé » coché). Fiche **v22**.
+- **WP-0029 — 2 copies dev/usage** : question utilisateur → avis « pour »
+  annoncé → go. Clone `C:/Users/ctg/SynologyDrive/code/github/assistant-projet-pm2-bundle`
+  (du remote GitHub, origin = la forge). Constat d'implémentation : le moteur
+  cherche `.assistant.config` à SA racine (`assistant.ps1` ligne 37) → configs
+  machine (`.assistant.config` + `.assistant-projet.env`, gitignorés) copiées
+  dans la copie d'usage, `openproject_token_file` répointé en local.
+  Convention : dev = dirty OK · usage = master seul, refresh délibéré.
+- **Règles globales opencode** (`~/.config/opencode/AGENTS.md`, chargement
+  à chaud vérifié) : rappel de la question en début de réponse + annonce
+  pour/contre sur les avis.
+
+## Suite 2 — 09/11 : plaidoyer « cumul de rôles » + collision de numérotation
+- **Plaidoyer utilisateur (mémo)** : en cas de cumul de rôles, la personne qui
+  cumule est **obligée** de clarifier sa casquette (ou de confirmer la
+  déduction) — contrainte **protectrice** (éviter d'être juge et partie),
+  **séparer les personnes physiques au plus vite** même à charge faible, le
+  cumul = problème de **charge mentale**, pas de charge de travail. Mémo dans :
+  `decisions.md` (ligne 09/11), PM2-03 §3, **WP-0034** tracé (protocole :
+  casquette obligatoire, haute).
+- **Collision de numérotation** : une session parallèle a tracé la série
+  « portefeuille » **WP-0028→0032** (dont un WP-0029, prioritaire haute) →
+  mon ticket « 2 copies » renummé **WP-0029 → WP-0033** (le numéro revient au
+  premier réservé de la série). Fiche v23 (fusion des infos des 2 sessions,
+  zéro écrasement).
+- **Signalé, non touché** : `vlc-help.txt` traîne à la racine du repo
+  (non versionné, provenance inconnue — probablement la session parallèle).
