@@ -10,7 +10,7 @@ moe: ""
 sp_project: ""
 op_id: ""
 créé: 2026-10-26
-mis_a_jour: "2026-11-09 (v23 : GO formel RfP consigné (sponsor ctg) + WP-0033 fait — 2 copies dev/usage (clone `assistant-projet-pm2-bundle` ; renummé de 0029, collision série portefeuille) + WP-0034 tracé — contrainte protectrice « cumul de rôles » (casquette obligatoire, séparer les personnes physiques au plus vite ; cumul = charge mentale, pas de charge de travail) · v22 : WP-0028→0032 tracés — série « portefeuille » : scope multi-niveaux (pf/pgm/prj/prd/srv/vs), attributs + flag « assisté », connecteurs de synchro, portabilité OpenProject, rapprochement 2ndB « assistant d'organisation » · v21 : WP-0026 fait à 100 % (docs 09/11) · WP-0027 tracé (brouillon v0) ; reste RfP : demandeur du mandat (PM2-01 §5), rôles (challengers + fiche §2 — cadre de séparation posé 09/11), dates comités (PM2-03 §4), réponse aux risques (PM2-03 §5), MOE)"
+mis_a_jour: "2026-11-10 (v24 : feedback 1 — fil pédagogique des abréviations : décision 10/11 + WP-0035 tracé + registre `abreviations.md` initialisé (RfP/WP/IA assimilées `[À confirmer]` — comptage à valider) · entretien RfP lancé, thème ① rôles en cours · v23 : GO formel RfP consigné (sponsor ctg) + WP-0033 fait — 2 copies dev/usage (clone `assistant-projet-pm2-bundle` ; renummé de 0029, collision série portefeuille) + WP-0034 tracé — contrainte protectrice « cumul de rôles » (casquette obligatoire, séparer les personnes physiques au plus vite ; cumul = charge mentale, pas de charge de travail) · v22 : WP-0028→0032 tracés — série « portefeuille » : scope multi-niveaux (pf/pgm/prj/prd/srv/vs), attributs + flag « assisté », connecteurs de synchro, portabilité OpenProject, rapprochement 2ndB « assistant d'organisation » · v21 : WP-0026 fait à 100 % (docs 09/11) · WP-0027 tracé (brouillon v0) ; reste RfP : ① rôles (entrevue en cours) · ② demandeur du mandat (PM2-01 §5) · ③ dates comités (PM2-03 §4) · ④ réponse aux risques (PM2-03 §5) · ⑤ MOE · ⑥ valeur chiffrée)"
 ---
 
 # assistant-projet-pm2 — le repo vu comme projet
@@ -36,7 +36,7 @@ mis_a_jour: "2026-11-09 (v23 : GO formel RfP consigné (sponsor ctg) + WP-0033 f
 | Phase | WPs dus (backlog/) | Fait | Check du gate |
 |---|---|---|---|
 | **Lancement** | WP-0001 → 0024 (24) | 14/24 | ☐ RfP |
-| **Planification** | WP-0025 → 0033 (9) | 3/9 | ☐ RfE |
+| **Planification** | WP-0025 → 0035 (11) | 3/11 | ☐ RfE |
 | **Exécution** | — | 0 | — |
 | **Clôture** | — | 0 | ☐ RfC |
 
@@ -72,6 +72,7 @@ mis_a_jour: "2026-11-09 (v23 : GO formel RfP consigné (sponsor ctg) + WP-0033 f
 | [WP-0032](backlog/WP-0032-rapprochement-assistant-organisation-2ndb.md) — **rapprochement** avec le projet 2ndB « assistant d'organisation » | a-faire | basse |
 | [WP-0033](backlog/WP-0033-deux-copies-dev-usage.md) — 2 copies du repo : dev (inception, dirty OK) / usage (bundle stable que les projets pointent, refresh délibéré) | **fait** (09/11 : clone `assistant-projet-pm2-bundle` + configs machine + décision ; renummé de WP-0029 — collision série portefeuille) | moyenne |
 | [WP-0034](backlog/WP-0034-contrainte-protectrice-cumul-roles.md) — contrainte protectrice cumul de rôles : casquette obligatoire (clarifier ou confirmer la déduction) + séparer les personnes physiques au plus vite | a-faire (brouillon à raffiner) | haute |
+| [WP-0035](backlog/WP-0035-fil-pedagogique-abreviations.md) — fil pédagogique des abréviations : nom complet (abréviation) à la 1re occurrence + registre d'assimilation (3 usages de l'interlocuteur ou demande explicite) | a-faire (brouillon) | moyenne |
 
 ## 4. Les plans de gestion envisagés (anti-surcharge)
 | Document | Statut : envisagé / utilisé / ignoré | Pourquoi |
