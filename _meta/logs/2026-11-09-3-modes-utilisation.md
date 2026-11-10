@@ -76,5 +76,6 @@ et celle du 09/11 (docs) — aucun log n'avait été écrit depuis `2026-11-05-p
   mon ticket « 2 copies » renummé **WP-0029 → WP-0033** (le numéro revient au
   premier réservé de la série). Fiche v23 (fusion des infos des 2 sessions,
   zéro écrasement).
-- **Signalé, non touché** : `vlc-help.txt` traîne à la racine du repo
-  (non versionné, provenance inconnue — probablement la session parallèle).
+- **Signalé, résolu le 10/11** : `vlc-help.txt` à la racine du repo — erreur
+  de contexte (confirmé utilisateur : c'était du 2ndb, pas de l'assistant),
+  fichier **vide (0 octet)** → supprimé.
