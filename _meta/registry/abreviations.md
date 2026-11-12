@@ -19,5 +19,6 @@ Chaque changement de statut est noté ici, avec sa preuve (`source`).
 | BM | Business Manager | non assimilée | — |
 | CP | Chef de Projet | non assimilée | — |
 | MOE | Maître d'Ouvrage | non assimilée | — |
+| TUI | Terminal User Interface (l'interface plein écran d'opencode) | non assimilée | introduite par l'assistant le 12/11 (fil thème / transfert d'onglets) |
 | SPO | `[À confirmer]` (glossaire du kit : « méthodologue ») | non assimilée | expansion officielle à confirmer (référentiel PM² RTBF) |
 | QAM | `[À confirmer]` (glossaire du kit : « qualité ») | non assimilée | expansion officielle à confirmer (référentiel PM² RTBF) |
