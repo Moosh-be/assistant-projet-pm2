@@ -49,11 +49,12 @@
 | `sync [--force-harness]` *(depuis un projet)* | déterministe | (remplace `update` — WP-0025) vérifie le **bundle** (version, `assistant_ref`) + déploie le **harness opencode** du projet (`.opencode/` + `opencode.json`, zéro écrasement). Chemins écrits en `C:/...` (lisibles PS + bash + opencode) |
 | `bootstrap` *(depuis un projet)* | déterministe | (ré)installe le bundle sur **cette machine** : `pointer` / `chercher` / `installer` + harness — **sans IA**, annonce + confirmation avant chaque action. C'est ce que le lanceur mince d'un projet sync chez un tiers déclenche si le bundle est introuvable |
 | `commence <nom>` | handoff IA | ouvre opencode dans le projet — l'agent prend le relais (mode B/C) |
-| `menu` / `?` | — | le menu |
+| `menu` | déterministe | les actions à envisager **AU VU DE L'ÉTAT** (WP-0039) : dans un projet = état (phase, gate, avancement, `[À confirmer]`, rôles, WPs, git) + actions proposées ; hors projet = portefeuille (projets des racines + état du gate) |
+| `?` / (aucun arg) | — | le menu statique (toutes les commandes) |
 
 > **Projet mince (WP-0025)** : le projet ne contient **que** la doc + la config de connexion (`_meta/registry/connexions.md` partagée, `connexions.local.md` machine gitignorée) + le lanceur mince + le bootstrap. L'outillage (templates, checklists, protocole, harness) **vit dans le bundle** et reste là.
 
-> **Source unique** : la logique de scan/statut vit **une seule fois** — dans le script. Les commandes opencode `/ap-scan-projets` et `/ap-statut-projet` **l'appellent** ; l'agent présente le résultat et conduit (il ne re-développe pas la logique).
+> **Source unique** : la logique de scan/statut/menu vit **une seule fois** — dans le script. Les commandes opencode `/ap-scan-projets`, `/ap-statut-projet` et `/assistant-menu` **l'appellent** ; l'agent présente le résultat et conduit (il ne re-développe pas la logique).
 
 ## 4. Brancher le bundle (une fois)
 ```

@@ -18,7 +18,7 @@ Donne le statut du projet selon le protocole d'ouverture de session d'`AGENT-pro
 
 ## 2. Le raisonnement PM² que le script ne fait pas (l'IA)
 
-1. **Le gate en cours** : état de la checklist `checklists/gate-<RfP|RfE|RfC>.md` (items verts / rouges) — la règle du gate : tant que la checklist PM2-27 n'est pas verte, aucun artefact de la phase suivante.
+1. **Le gate en cours** : état de la checklist `methode/PM2/fr/checklists/gate-<RfP|RfE|RfC>.md` (bundle ; items verts / rouges) — la règle du gate : tant que la checklist PM2-27 n'est pas verte, aucun artefact de la phase suivante.
 2. **Les WPs** : lire `backlog/` du projet (1 fichier = 1 WP : statut, priorité, phase) ; si connexion active (frontmatter `sp_project` / `op_id`), inclure les ids de liaison `sp_id` / `op_id`. Sinon : « aucune connexion ticketing active ».
 3. **Les propositions mode C en attente de validation** (si accumulées dans la session).
 

@@ -26,9 +26,11 @@
      sync               → (from a project) check the bundle (version) + the opencode harness (replaces update)
      bootstrap          → (from a project) (re)install the bundle : point / search / install + harness
      commence <name>    → THE AGENT : opens opencode in the project (driving, mode B/C)
+     menu               → the actions to consider FROM THE STATE (current project, or the portfolio when out of project)
 3. In the agent (opencode) :
      /ap-scan-projets                 → the native scan, presented and driven by the agent
      /ap-statut-projet                → native status (phase + gate + progress)
+     /assistant-menu                  → the state menu (actions to consider from the state)
      "start the project <Name>"  → start / resume a PM² project
      "create a project <Name>"   → new THIN project (docs + Lancement phase ; the tooling stays in the bundle)
 4. Tip : existing projects ? start with scan. Otherwise : create your first project.
@@ -40,15 +42,13 @@ Full walkthrough → [`docs/prise-en-main.md`](docs/prise-en-main.md) · install
 
 ## The bundle (folder layout)
 ```
-assistant.ps1 / assistant.sh ← THE NATIVE ENGINE of the bundle (no AI, no dependency) : scan, statut, new, add, sync, bootstrap, commence
+assistant.ps1 / assistant.sh ← THE NATIVE ENGINE of the bundle (no AI, no dependency) : scan, statut, menu, new, add, sync, bootstrap, commence
 install.ps1 / install.sh     ← install wizard (1×) : cross-cutting config (env, opencode, roots, connections)
 .assistant.version           ← the bundle version (the marker the bootstrap searches for on disk)
 versions/                    ← pinned bundle versions (assistant_ref: <version> → versions/<version>/)
 AGENT-projet.md              ← THE AI routing note — the thin project points to it via its opencode.json
 projet.md                    ← the project-sheet template (pre-filled at creation : name + date)
-01..05/                      ← the PM² phases (here : the meta-project data ; in a created project : empty, the data is written there)
-checklists/                  ← per gate (RfP/RfE/RfC) and per role (sponsor/BM/CP)
-referentiel-templates-PM2.md ← the PM² templates mapping
+methode/                     ← the METHODS : methode/<M>/<lang>/ — PM2/fr : the 01..05 phases (here : the meta-project data ; in a created project : empty, the data is written there) + checklists (per gate RfP/RfE/RfC and per role) + templates referentiel ; coming : PfM2, PMFLEX, SAFe, Scrum, PRINCE2, PMP, Lean, Lean6Sigma
 tools/                       ← templates/ (the thin-project skeletons : launcher, bootstrap, gitignore, sheet) + gen_templates.py
 docs/                        ← onboarding + install (hammer / vault)
 _meta/                       ← INCEPTION : the repo developed as its own PM² project

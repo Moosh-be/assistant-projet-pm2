@@ -509,9 +509,11 @@ La langue principale actuelle des templates est le **français**. Les variantes 
      sync               → (depuis un projet) vérifier le bundle (version) + le harness opencode (remplace update)
      bootstrap          → (depuis un projet) (ré)installer le bundle : pointer / chercher / installer + harness
      commence <nom>     → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
+     menu               → les actions à envisager AU VU DE L'ÉTAT (projet courant, ou le portefeuille si hors projet)
 3. Dans l'agent (opencode) :
      /ap-scan-projets                 → le scan natif, présenté et conduit par l'agent
      /ap-statut-projet                → le statut natif (phase + gate + avancement)
+     /assistant-menu                  → le menu d'état (les actions à envisager au vu de l'état)
      « commence le projet <Nom> » → démarrer / reprendre un projet PM²
      « crée un projet <Nom> »     → nouveau projet MINCE (doc + phase Lancement ; l'outillage reste dans le bundle)
 4. Conseil : des projets existants ? commence par scan. Sinon : crée ton premier projet.
@@ -519,21 +521,19 @@ La langue principale actuelle des templates est le **français**. Les variantes 
 > Tes projets sont déjà organisés (ex. `code/github/…` + `code/gitlab/…`) ? Garde-les ainsi :
 > l'assistant travaille sur des **racines de projets** (plusieurs dossiers), il ne demande pas de coffre monolithe.
 
-Parcours complet → [`docs/prise-en-main.md`](docs/prise-en-main.md) · détails d'installation → [`docs/install.md`](docs/install.md)
+**Comment commencer (machine neuve, zéro contexte)** → [`docs/comment-commencer.md`](docs/comment-commencer.md) · Parcours complet → [`docs/prise-en-main.md`](docs/prise-en-main.md) · détails d'installation → [`docs/install.md`](docs/install.md) · **guide complet (6 chapitres : exemples, installation, perspectives, personnalisation, connexions, méthodes)** → [`docs/guide.md`](docs/guide.md)
 
 ## Le bundle (arborescence)
 ```
-assistant.ps1 / assistant.sh ← LE MOTEUR natif du bundle (sans IA, sans dépendance) : scan, statut, new, add, sync, bootstrap, commence
+assistant.ps1 / assistant.sh ← LE MOTEUR natif du bundle (sans IA, sans dépendance) : scan, statut, menu, new, add, sync, bootstrap, commence
 install.ps1 / install.sh     ← wizard d'installation (1×) : config transversale (env, opencode, racines, connexions)
 .assistant.version           ← la version du bundle (le marqueur que le bootstrap cherche sur disque)
 versions/                    ← les versions figées du bundle (assistant_ref: <version> → versions/<version>/)
 AGENT-projet.md              ← LA note de routage IA — le projet mince la pointe via son opencode.json
 projet.md                    ← template de la fiche projet (pré-rempli à la création : nom + date)
-01..05/                      ← les phases PM² (ici : la data du projet méta ; dans un projet créé : vides, la data s'y écrit)
-checklists/                  ← par gate (RfP/RfE/RfC) et par rôle (sponsor/BM/CP)
-referentiel-templates-PM2.md ← le mapping des templates PM²
+methode/                     ← les MÉTHODES : methode/<M>/<lang>/ — PM2/fr : les phases 01..05 (ici : la data du projet méta ; dans un projet créé : vides, la data s'y écrit) + checklists (par gate RfP/RfE/RfC et par rôle) + referentiel des templates ; à venir : PfM2, PMFLEX, SAFe, Scrum, PRINCE2, PMP, Lean, Lean6Sigma
 tools/                       ← templates/ (les gabarits des projets minces : lanceur, bootstrap, gitignore, fiche) + gen_templates.py
-docs/                        ← prise en main + installation (marteau / coffre)
+docs/                        ← prise en main + installation (marteau / coffre) + guide (6 chapitres)
 _meta/                       ← INCEPTION : le repo mené comme son propre projet PM²
 ```
 > ⭐ **Le projet est MINCE** : `assistant new` crée un projet qui ne contient que la **doc** (`projet.md`, `01..05`, `_meta`), la **config de connexion** (`_meta/registry/connexions.md` partagée + `connexions.local.md` machine), le **lanceur mince** (`assistant.ps1/.sh`) et le **bootstrap** (`bootstrap.ps1/.sh`). Le reste — templates, checklists, protocole, harness `.opencode/` — **reste dans le bundle**. C'est pour ça qu'un projet sync chez un tiers reste lisible, et c'est pour ça que le bootstrap existe : **sans IA**, il retablit le lien vers le bundle (pointer / chercher / installer), en **annonçant + confirmant chaque action**, puis propose le harness opencode.

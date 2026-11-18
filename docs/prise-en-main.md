@@ -41,7 +41,7 @@
    > commence le projet Mon-Projet
    ```
 5. **L'agent** lit la note de routage **dans le bundle** → annonce : *« Phase Lancement, gate suivant RfP. Le PM2-01 Demande de lancement est vide. On le remplit ? »* → puis **les questions** du template, **une à une, au fil de l'eau**.
-6. **À chaque gate** : l'agent passe la **checklist** (`checklists/gate-RfP.md` = transposition du PM2-27, **dans le bundle**) → verte → passage de phase (frontmatter `phase:` + `gate_suivant:`).
+6. **À chaque gate** : l'agent passe la **checklist** (`methode/PM2/fr/checklists/gate-RfP.md` = transposition du PM2-27, **dans le bundle**) → verte → passage de phase (frontmatter `phase:` + `gate_suivant:`).
 7. **Chez un tiers / sur une autre machine** : le projet sync porte la doc + la config partagée. Si le bundle n'est pas local, le **lanceur mince** lance le **bootstrap** (pointer / chercher / installer — sans IA, annonce + confirmation à chaque action) puis propose le harness.
 
 ## 4. Le quotidien (le mode C — l'écoute passive) ⭐

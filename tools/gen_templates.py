@@ -15,7 +15,8 @@ Usage : python tools/gen_templates.py   (dans la racine du repo)
 """
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+# WP-0040 : la méthode PM2 FR vit dans methode/<M>/<lang>/ (plus à la racine du bundle).
+ROOT = Path(__file__).resolve().parent.parent / "methode" / "PM2" / "fr"
 
 # (code, nom, phase, gate, sections, questions)
 TEMPLATES = [
@@ -167,7 +168,7 @@ BODY = """
 ## 3. Statut de remplissage
 - [ ] Sections remplies : 0/{nsec}
 - [ ] Aucune donnée non validée sans `[À confirmer]`
-- [ ] Gate (si applicable) : checklist consultée → `checklists/gate-{gate}.md`
+- [ ] Gate (si applicable) : checklist consultée → `../checklists/gate-{gate}.md`
 """
 
 

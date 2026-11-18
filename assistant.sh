@@ -21,7 +21,9 @@
 #   bootstrap          (depuis un projet) (ré)installe le bundle : pointer / chercher / installer + harness
 #   remark <texte>     (depuis un projet) journal des remarques au vol (remontée au projet assistant)
 #   commence <nom>     → l'agent : ouvre opencode dans le projet (handoff)
-#   menu / ?           ce menu
+#   menu              les actions à envisager AU VU DE L'ÉTAT (projet courant ou portefeuille) — WP-0039
+#   journal-watch       watcher du journal des échanges : ouvre l'éditeur de note à chaque création/modification (WP-0049)
+#   ? / (aucun arg)    ce menu (toutes les commandes)
 #
 # La logique de scan/statut vit ICI (source unique) : les commandes opencode /ap-scan-projets /ap-statut-projet l'appellent.
 
@@ -56,6 +58,34 @@ get_meta_folder() {
   printf '_meta'
 }
 META="$(get_meta_folder)"
+
+# Lit une ligne "key = value" de la config machine (vide si absente).
+get_config_key() {
+  if [ -n "$CONFIG" ] && [ -f "$CONFIG" ]; then
+    local v
+    v="$(grep -m1 "^[[:space:]]*$1[[:space:]]*=" "$CONFIG" 2>/dev/null | sed -E 's/^[[:space:]]*'"$1"'[[:space:]]*=[[:space:]]*//' | sed 's/[[:space:]]*$//')"
+    [ -n "$v" ] && { printf '%s' "$v"; return; }
+  fi
+  printf ''
+}
+
+# pid_alive <pid> : le process est-il vivant ? Sur MINGW, kill -0 ne VOIT PAS les
+# process d'une autre session console (« No such process » sur un powershell vivant)
+# — on passe par tasklist dans ce cas (vérifié 18/11).
+pid_alive() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) tasklist //FI "PID eq $1" 2>/dev/null | grep -qw "$1" ;;
+    *) kill -0 "$1" 2>/dev/null ;;
+  esac
+}
+
+# kill_pid <pid> : tuer un process (même visibilité MINGW : taskkill).
+kill_pid() {
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) taskkill //PID "$1" //F >/dev/null 2>&1 ;;
+    *) kill "$1" 2>/dev/null ;;
+  esac
+}
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 get_racines() {
@@ -122,8 +152,10 @@ deploy_kit() {
   fi
 
   # 2) Dossiers de phases (01..05) VIDES : la data s'y écrit, l'outillage n'y vit plus.
+  # Noms des phases = la méthode PM2 FR du bundle (WP-0040 : methode/PM2/fr/).
+  # (v2 : la méthode du projet (frontmatter methode:) choisira l'arbo methode/<M>/<lang>/)
   local d base t
-  for d in "$ROOT"/*; do
+  for d in "$ROOT"/methode/PM2/fr/*; do
     [ -d "$d" ] || continue
     base="$(basename "$d")"
     case "$base" in
@@ -421,15 +453,15 @@ cmd_scan() {
       while IFS= read -r n; do
         [ -z "$n" ] && continue
         local fm_phase fm_gate
-        fm_phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
-        fm_gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        fm_phase="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        fm_gate="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
         printf '    + %s  -  phase %s, gate %s   (mince)\n' "$n" "${fm_phase:-?}" "${fm_gate:-?}"
       done <<< "$mince"
       while IFS= read -r n; do
         [ -z "$n" ] && continue
         local fm_phase fm_gate
-        fm_phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
-        fm_gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        fm_phase="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
+        fm_gate="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$r/$n/projet.md")"
         printf '    + %s  -  phase %s, gate %s   (copie complete, pre-WP-0025)\n' "$n" "${fm_phase:-?}" "${fm_gate:-?}"
       done <<< "$legacy"
     fi
@@ -485,8 +517,8 @@ liste_projects() {
       case "$seen" in *"|$d|"*) continue ;; esac
       seen="$seen|$d|"
       src="$d/projet.md"; [ -f "$src" ] || src="$d/$META/fiche.md"
-      ph="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
-      gt="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+      ph="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+      gt="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
       nom="$(basename "$d")"
       rows="$rows$(printf '    %-28s  [%s / %s]\n' "$nom" "$ph" "$gt")
 "
@@ -522,13 +554,13 @@ cmd_statut() {
   echo ""; echo "=== Statut : $(basename "$p") ==="
   echo "  (source : $(basename "$src"))"
   local phase gate sp op spon bm cp moe
-  phase="$(awk '/^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
-  gate="$(awk '/^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+  phase="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+  gate="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
   printf '  Phase : %s   |   Gate suivant : %s\n' "${phase:-?}" "${gate:-?}"
   # Pédagogie (WP-0022) : phases sautées = signalées (la table d'avancement = source de vérité).
   local curp="Lan"
   case "$phase" in Plan*) curp="Pla";; Ex*) curp="Ex";; Cl*) curp="Cl";; esac
-  local rows; rows="$(awk -F'|' '/^## 3\./{in3=1;next} in3 && /^## /{exit} in3 {
+  local rows; rows="$(awk -F'|' '{sub(/\r$/,"")} /^## 3\./{in3=1;next} in3 && /^## /{exit} in3 {
       n=split($0, cc, "|");
       if (n < 6) next;
       name=cc[2]; gate=cc[5];
@@ -558,24 +590,24 @@ cmd_statut() {
     done <<< "$rows"
     [ -n "$sautees" ] && printf '  Sautees : %s   (gate non vert - a combler par maitrise, pas par dehabitude)\n' "$sautees"
   fi
-  spon="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sponsor:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
-  bm="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^bm:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
-  cp2="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^cp:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
-  moe="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^moe:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  spon="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^sponsor:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  bm="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^bm:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  cp2="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^cp:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  moe="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^moe:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   local roles=""
   [ -n "$spon" ] && roles="sponsor: $spon"
   [ -n "$bm" ] && roles="${roles:+$roles  |  }bm: $bm"
   [ -n "$cp2" ] && roles="${roles:+$roles  |  }cp: $cp2"
   [ -n "$moe" ] && roles="${roles:+$roles  |  }moe: $moe"
   if [ -n "$roles" ]; then printf '  Rôles   : %s\n' "$roles"; else echo "  Rôles   : (non identifiés)"; fi
-  sp="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^sp_project:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
-  op="$(awk -F': *' '/^---$/{c++;next} c==1{if(/^op_id:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  sp="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^sp_project:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
+  op="$(awk -F': *' '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^op_id:/){print $2; exit}}' "$src" | sed 's/^"//;s/"$//')"
   local tix=""
   [ -n "$sp" ] && tix="SP: $sp"
   [ -n "$op" ] && tix="${tix:+$tix  |  }OP: $op"
   if [ -n "$tix" ]; then printf '  Tickets : %s\n' "$tix"; else echo "  Tickets : (aucune connexion active)"; fi
   echo "  Avancement :"
-  awk '/^## 3\./{in3=1;next} in3 && /^## /{exit} in3 && /^[[:space:]]*\|/{print "    " $0}' "$src"
+  awk '{sub(/\r$/,"")} /^## 3\./{in3=1;next} in3 && /^## /{exit} in3 && /^[[:space:]]*\|/{print "    " $0}' "$src"
 }
 
 cmd_new() {
@@ -710,12 +742,312 @@ cmd_remark() {
   echo "  Pour une amélioration du kit : ajouter [pour l'assistant] dans l'entrée."
 }
 
+# ── Menu d'état (WP-0039) : "assistant menu" v1 ─────────────────────────────
+# Les actions à envisager AU VU DE L'ÉTAT :
+#   dans un projet  -> l'état (phase, gate, avancement, À confirmer, rôles, WPs, git) + actions proposées
+#   hors projet     -> le portefeuille (projets des racines + état du gate) + les projets à pousser
+# projet_etat <dossier> [lite] : écrit l'état au format clé=valeur (1 par ligne)
+projet_etat() {
+  local p="$1" lite="${2:-}"
+  local src="$p/projet.md"
+  [ -f "$src" ] || src="$p/$META/fiche.md"
+  if [ ! -f "$src" ]; then
+    printf 'phase=\ngate=\ngatecell=\navancement=\nroles=\naconfirmer=0\nwps=0\nwps_hautes=\ndirty=-1\n'
+    return
+  fi
+  local phase gate roles
+  phase="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^phase:/){sub(/^phase:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+  gate="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^gate_suivant:/){sub(/^gate_suivant:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$src")"
+  roles="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^(sponsor|bm|cp|moe):/){v=$0; sub(/^[a-z_]+:[ \t]*/,"",v); gsub(/^"|"$/,"",v); if (v!="") print}}' "$src" | paste -sd, -)"
+  local curp="Lan"
+  case "$phase" in Plan*) curp="Pla";; Ex*) curp="Ex";; Cl*) curp="Cl";; esac
+  # La ligne de la phase courante dans la table d'avancement (section 3) : avancement + check du gate.
+  local cur
+  cur="$(awk -F'|' -v cp="$curp" '{sub(/\r$/,"")} /^## 3\./{in3=1;next} in3 && /^## /{exit} in3 {
+      n=split($0, cc, "|");
+      if (n < 6) next;
+      name=cc[2]; gsub(/[*]/,"",name); gsub(/^ +| +$/,"",name);
+      if (name=="Phase" || name ~ /^-+$/) next;
+      if (index(name, cp) == 1) { printf "%s\t%s", cc[4], cc[5]; exit }
+    }' "$src")"
+  printf 'phase=%s\n' "$phase"
+  printf 'gate=%s\n' "$gate"
+  printf 'gatecell=%s\n' "$(printf '%s' "$cur" | cut -f2)"
+  printf 'avancement=%s\n' "$(printf '%s' "$cur" | cut -f1)"
+  printf 'roles=%s\n' "$roles"
+  if [ -n "$lite" ]; then
+    printf 'aconfirmer=0\nwps=0\nwps_hautes=\ndirty=-1\n'
+    return
+  fi
+  # [À confirmer] dans les artefacts de phase : les dossiers 0* de la racine ET (WP-0040)
+  # le kit lui-même tient les siens sous methode/<M>/<lang>/0*.
+  local n=0 f d
+  for d in "$p"/0* "$p"/methode/*/*/0*; do
+    [ -d "$d" ] || continue
+    n=$((n + $(find "$d" -name '*.md' -not -path '*node_modules*' -type f -exec grep -ohE 'À confirmer|A confirmer' {} + 2>/dev/null | wc -l)))
+  done
+  printf 'aconfirmer=%s\n' "$n"
+  # WPs ouverts (si le dossier est aussi un kit : <meta>/backlog)
+  local w=0 wh="" whn=0 wf ws wprio
+  if [ -d "$p/$META/backlog" ]; then
+    for wf in "$p/$META/backlog"/WP-*.md; do
+      [ -f "$wf" ] || continue
+      ws="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^statut:/){sub(/^statut:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$wf")"
+      wprio="$(awk '{sub(/\r$/,"")} /^---$/{c++;next} c==1{if(/^priorite:/){sub(/^priorite:[ \t]*/,""); gsub(/^"|"$/,""); print; exit}}' "$wf")"
+      case "$ws" in
+        a-faire|en-cours)
+          w=$((w+1))
+          if [ "$wprio" = "haute" ] && [ "$whn" -lt 3 ]; then wh="${wh:+$wh, }$(basename "$wf" .md | sed 's/^WP-[0-9]*-//')"; whn=$((whn+1)); fi
+          ;;
+      esac
+    done
+  fi
+  printf 'wps=%s\n' "$w"
+  printf 'wps_hautes=%s\n' "$wh"
+  # Repo git : fichiers modifiés
+  local dirty=-1
+  if [ -d "$p/.git" ]; then
+    dirty="$(git -C "$p" status --porcelain 2>/dev/null | grep -c .)"
+    [ -n "$dirty" ] || dirty=0
+  fi
+  printf 'dirty=%s\n' "$dirty"
+}
+
+cmd_menu() {
+  local p; p="$(pwd)"
+  local ok1="☑" ok2="✅" dash="—"
+  if [ -f "$p/projet.md" ] || [ -f "$p/$META/fiche.md" ]; then
+    local phase="" gate="" gatecell="" avancement="" roles="" aconf=0 wps=0 whautes="" dirty=-1
+    while IFS='=' read -r k v; do
+      case "$k" in
+        phase) phase="$v";;
+        gate) gate="$v";;
+        gatecell) gatecell="$v";;
+        avancement) avancement="$v";;
+        roles) roles="$v";;
+        aconfirmer) aconf="$v";;
+        wps) wps="$v";;
+        wps_hautes) whautes="$v";;
+        dirty) dirty="$v";;
+      esac
+    done <<< "$(projet_etat "$p")"
+    local leaf; leaf="$(basename "$p")"
+    local green=0
+    case "$gatecell" in "$ok1"*|"$ok2"*) green=1;; esac
+    echo ""
+    echo "=== Menu : $leaf  (les actions à envisager au vu de l'état) ==="
+    printf '  Phase : %s   |   Gate : %s   |   Avancement : %s   |   Gate check : %s\n' "${phase:-?}" "${gate:-?}" "${avancement:-?}" "${gatecell:-?}"
+    echo ""
+    echo "  Actions à envisager :"
+    local n=0 wt
+    if [ "$green" -eq 0 ]; then
+      n=$((n+1)); printf '  %s. Terminer la phase : le prochain artefact du référentiel (mode B/C)  ->  commence %s   (ou : opencode dans le projet)\n' "$n" "$leaf"
+      n=$((n+1)); printf '  %s. Vérifier la checklist du gate : methode/PM2/fr/checklists/gate-%s.md (dans le bundle)\n' "$n" "${gate:-?}"
+    fi
+    if [ "${aconf:-0}" -gt 0 ] 2>/dev/null; then
+      n=$((n+1)); printf '  %s. Valider les %s items [À confirmer] (preuve, pas invention — chacun a sa source)\n' "$n" "$aconf"
+    fi
+    if [ -z "$roles" ]; then
+      n=$((n+1)); echo "  $n. Identifier les 4 rôles piliers (sponsor / bm / cp / moe) — requis pour le gate"
+    fi
+    if [ "${wps:-0}" -gt 0 ] 2>/dev/null; then
+      wt="WPs ouverts : $wps  (_meta/backlog/)"
+      [ -n "$whautes" ] && wt="$wt   haute priorité : $whautes"
+      n=$((n+1)); echo "  $n. $wt"
+    fi
+    if [ "${dirty:--1}" -ge 0 ] 2>/dev/null && [ "${dirty:-0}" -gt 0 ] 2>/dev/null; then
+      n=$((n+1)); printf '  %s. Commit / push : %s fichiers modifiés (repo git)\n' "$n" "$dirty"
+    fi
+    n=$((n+1)); echo "  $n. Vérifier le bundle + le harness  ->  sync"
+    n=$((n+1)); echo "  $n. Noter une remarque au vol  ->  remark '<texte>'"
+    echo ""
+    echo "  (détail : statut   -   toutes les commandes : ?)"
+  else
+    echo ""
+    echo "=== Menu : portefeuille  (hors projet — au vu de l'état des racines) ==="
+    local roots; roots="$(get_racines)"
+    if [ -z "$(printf '%s' "$roots" | tr -d '[:space:]')" ]; then
+      echo "  Aucune racine définie  ->  install.sh (définir les racines)."
+    else
+      local r d i nred=0 c2=0
+      local names=() phases=() gates=() etats=()
+      while IFS= read -r r; do
+        [ -z "$r" ] && continue
+        [ -d "$r" ] || continue
+        while IFS= read -r d; do
+          [ -z "$d" ] && continue
+          [ -f "$d/projet.md" ] || [ -f "$d/$META/fiche.md" ] || continue
+          local et ph gt gc st
+          et="$(projet_etat "$d" lite)"
+          ph="$(printf '%s\n' "$et" | sed -n 's/^phase=//p')"
+          gt="$(printf '%s\n' "$et" | sed -n 's/^gate=//p')"
+          gc="$(printf '%s\n' "$et" | sed -n 's/^gatecell=//p')"
+          st="?"
+          case "$gc" in
+            "$ok1"*|"$ok2"*) st="gate VERT";;
+            "") : ;;
+            "$dash"*|"-"*) st="sans gate";;
+            *) st="gate ROUGE";;
+          esac
+          names+=("$(basename "$d")"); phases+=("$ph"); gates+=("$gt"); etats+=("$st")
+        done < <(find "$r" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+      done <<< "$roots"
+      if [ ${#names[@]} -eq 0 ]; then
+        echo "  Aucun projet trouvé dans les racines  ->  scan (les espaces inconnus)."
+      else
+        printf '  %-28s %-14s %-8s %s\n' "nom" "phase" "gate" "état"
+        for i in "${!names[@]}"; do
+          printf '  %-28s %-14s %-8s %s\n' "${names[$i]}" "${phases[$i]}" "${gates[$i]}" "${etats[$i]}"
+        done
+        for i in "${!names[@]}"; do [ "${etats[$i]}" = "gate ROUGE" ] && nred=$((nred+1)); done
+        if [ "$nred" -gt 0 ]; then
+          echo ""
+          printf '  À pousser (gate non vert) : %s projet(s) :\n' "$nred"
+          for i in "${!names[@]}"; do
+            if [ "${etats[$i]}" = "gate ROUGE" ] && [ "$c2" -lt 5 ]; then
+              printf '    - %s   (%s / %s)\n' "${names[$i]}" "${phases[$i]}" "${gates[$i]}"
+              c2=$((c2+1))
+            fi
+          done
+        fi
+      fi
+    fi
+    local n=0
+    echo ""
+    echo "  Actions à envisager :"
+    n=$((n+1)); echo "  $n. Les espaces inconnus des racines  ->  scan"
+    n=$((n+1)); echo "  $n. La liste des projets (nom + phase + gate)  ->  liste"
+    n=$((n+1)); echo "  $n. Le détail d'un projet  ->  statut <nom>"
+    n=$((n+1)); echo "  $n. Travailler un projet avec l'agent  ->  commence <nom>   (ouvre opencode)"
+    n=$((n+1)); echo "  $n. Créer un projet MINCE  ->  new <nom> [racine]   (-doc : sans code)"
+    n=$((n+1)); echo "  $n. Ajouter l'assistant à un projet existant  ->  add <dossier>"
+    echo ""
+    echo "  (toutes les commandes : ?)"
+  fi
+}
+
+# ── journal-watch (WP-0049) ───────────────────────────────────────────────────
+# Watcher du journal des échanges : ouvre l'éditeur de note (config note_editor) à chaque
+# création/modification du journal. Polling 2 s (mtime + size). Sans argument = démarrer
+# (idempotent) ; -statut ; -stop ; -run = mode interne (process détaché).
+cmd_journal_watch() {
+  local sub="${1:-}"
+  local j ed pf
+  if [ "$sub" = "-run" ]; then
+    j="${2:-}"; ed="${3:-}"; pf="${4:-}"
+    if [ -z "$j" ] || [ -z "$ed" ] || [ -z "$pf" ]; then echo "usage (interne): journal-watch -run <journal> <editor> <pidfile> [token]"; return; fi
+    # NB : sur ce build MSYS, $$ est un PID VIRTUEL (pas le PID Windows, vérifié
+    # 18/11) — le lanceur (MINGW) remplace ce contenu par le VRAI PID (WMI).
+    echo $$ > "$pf"
+    local last=""
+    [ -f "$j" ] && last="$(stat -c '%Y %s' "$j" 2>/dev/null || stat -f '%m %z' "$j" 2>/dev/null)"
+    while true; do
+      sleep 2
+      local cur=""
+      [ -f "$j" ] && cur="$(stat -c '%Y %s' "$j" 2>/dev/null || stat -f '%m %z' "$j" 2>/dev/null)"
+      if [ -n "$cur" ] && [ "$cur" != "$last" ]; then
+        # Lancement direct, détaché. Pas de `cmd /c start ""` : sur ce build MSYS,
+        # l'argument titre vide de `start` TRONQUE la ligne de commande Windows
+        # (tout ce qui suit le titre est perdu — le bat n'était pas exécuté ;
+        # tests 18/11 : le lancement direct du .bat/.exe passe sans start).
+        "$ed" "$j" >/dev/null 2>&1 &
+        last="$cur"
+      fi
+      if [ -z "$cur" ]; then last=""; fi
+    done
+    return
+  fi
+  local flag editor
+  flag="$(get_config_key journal_notepad)"
+  editor="$(get_config_key note_editor)"
+  # journal = du projet courant (ou de la racine du kit si hors projet)
+  local p root
+  p="$(pwd)"
+  root="$p"
+  [ ! -f "$p/projet.md" ] && [ ! -f "$p/$META/fiche.md" ] && root="$ROOT"
+  j="$root/$META/registry/journal-echanges.md"
+  # pidfile déterministe : hash du chemin CANNONIQUE du journal (partagé entre PS et bash)
+  local jw hash tmpdir
+  jw="$(conf_path "$j")"
+  hash="$(printf '%s' "$jw" | md5sum 2>/dev/null | cut -c1-12)"
+  [ -z "$hash" ] && hash="default"
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) tmpdir="$(cygpath -w "${TEMP:-/tmp}" 2>/dev/null | tr '\\' '/' | sed 's|/$||')" ;;
+    *) tmpdir="${TMPDIR:-/tmp}" ;;
+  esac
+  pf="$tmpdir/assistant-jw-$hash.pid"
+  case "$sub" in
+    -statut)
+      local pidv=""; [ -f "$pf" ] && pidv="$(tr -d '[:space:]' < "$pf" 2>/dev/null)"
+      if [ -n "$pidv" ] && pid_alive "$pidv"; then echo "watcher du journal EN COURS (PID $pidv) : $j"
+      elif [ -n "$pidv" ]; then echo "watcher du journal : PID $pidv mort (pidfile stale) - relancer journal-watch"
+      else echo "watcher du journal : PAS en cours ($j)"; fi
+      ;;
+    -stop)
+      local pidv=""; [ -f "$pf" ] && pidv="$(tr -d '[:space:]' < "$pf" 2>/dev/null)"
+      if [ -n "$pidv" ] && pid_alive "$pidv"; then kill_pid "$pidv"; echo "watcher du journal ARRETE (PID $pidv)"
+      elif [ -n "$pidv" ]; then echo "watcher du journal : deja mort (PID $pidv)"
+      else echo "watcher du journal : rien a arreter"; fi
+      rm -f "$pf"
+      ;;
+    *)
+      case "$flag" in
+        oui|yes|true|1) : ;;
+        *) echo "journal_notepad n'est pas active dans la config machine (journal_notepad = $flag)"
+           echo "  -> ajouter dans .assistant.config :  journal_notepad = oui"; return ;;
+      esac
+      if [ -z "$editor" ]; then echo "note_editor manquant dans la config machine (.assistant.config)"
+        echo "  -> ajouter :  note_editor = <chemin de l'editeur de note>"; return; fi
+      local pidv=""; [ -f "$pf" ] && pidv="$(tr -d '[:space:]' < "$pf" 2>/dev/null)"
+      if [ -n "$pidv" ] && pid_alive "$pidv"; then echo "watcher du journal DEJA en cours (PID $pidv) : $j"; return; fi
+      # </dev/null : sans stdin détaché, le watcher meurt quand la console qui
+      # l'a lancé (ex. le shell-outil de l'IA) est détruite (vérifié 18/11).
+      local token="" realpid="" wpid=""
+      case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+          # Ce build MSYS expose des PIDs VIRTUELS ($$ / $! ne sont PAS les PIDs
+          # Windows — vérifié 18/11 : $$ = 1824 alors que le PID Windows = 43444).
+          # Un token unique dans la ligne de commande permet de retrouver le VRAI
+          # PID du fils via WMI (le pidfile doit contenir le PID Windows : il est
+          # partagé avec le moteur PS).
+          token="jw-$(date +%s)-$RANDOM"
+          nohup bash "$ROOT/assistant.sh" journal-watch -run "$j" "$editor" "$pf" "$token" </dev/null >/dev/null 2>&1 &
+          wpid=$!
+          disown 2>/dev/null || true
+          local i
+          for i in 1 2 3 4 5 6; do
+            sleep 1
+            realpid="$(powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='bash.exe'\" | Where-Object { \$_.CommandLine -like \"*${token}*\" } | Select-Object -First 1 -ExpandProperty ProcessId" 2>/dev/null | tr -d '[:space:]')"
+            [ -n "$realpid" ] && break
+          done
+          [ -n "$realpid" ] && echo "$realpid" > "$pf"
+          ;;
+        *)
+          nohup bash "$ROOT/assistant.sh" journal-watch -run "$j" "$editor" "$pf" </dev/null >/dev/null 2>&1 &
+          wpid=$!
+          disown 2>/dev/null || true
+          sleep 0.5
+          pid_alive "$wpid" && realpid="$wpid"
+          ;;
+      esac
+      if [ -n "$realpid" ]; then
+        echo "watcher du journal demarre (PID $realpid) : $j"
+        echo "  -> l'editeur s'ouvrira a chaque creation/modification du journal (polling 2s)"
+        echo "  -> arret : assistant journal-watch -stop   -   statut : assistant journal-watch -statut"
+      else
+        echo "ATTENTION : demarrage du watcher echoue - relancer journal-watch"
+      fi
+      ;;
+  esac
+}
+
 show_menu() {
   cat <<'EOF'
 
 ================================================
  assistant - menu  (sans IA : rapide, gratuit)
   PM2 : Lancement → Planification → Exécution → Clôture  (1 gate = 1 checklist par phase)
+  methode/ : les méthodes (PM2/fr — à venir : PfM2, PMFLEX, SAFe, Scrum, PRINCE2, Lean…)
 ================================================
   -- Gérer les projets (depuis le kit ou les racines) --
   scan                 les projets des racines : assistés (mince / copie complète) / pourraient / sans signal
@@ -731,14 +1063,16 @@ show_menu() {
   bootstrap          (ré)installer le bundle sur cette machine : pointer / chercher / installer + harness
   remark <texte>       journal des remarques au vol (remontée au projet assistant)
   commence <nom>       → L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)
-  menu / ?             ce menu
+   menu                 les actions à envisager AU VU DE L'ÉTAT (projet courant ou portefeuille) — WP-0039
+   journal-watch [-statut|-stop]  watcher du journal des échanges : ouvre l'éditeur (note_editor) à chaque création/modification — WP-0049
+  ? / (aucun arg)      ce menu (toutes les commandes)
 
 EOF
 }
 
 # ── Dispatch ────────────────────────────────────────────────────────────────
 if [ $# -eq 0 ]; then show_menu; exit 0; fi
-c="${1#/}"; c="${c/-/}"
+c="${1#/}"; c="${c#-}"
 case "$c" in
   scan) cmd_scan ;;
   statut) cmd_statut "${2:-}" ;;
@@ -757,6 +1091,8 @@ case "$c" in
   bootstrap) shift; cmd_bootstrap "$@" ;;
   remark) cmd_remark "${2:-}" ;;
   commence) cmd_commence "${2:-}" ;;
-  menu|"\?") show_menu ;;
+  menu) cmd_menu ;;
+  journal-watch) shift; cmd_journal_watch "$@" ;;
+  "\?") show_menu ;;
   *) echo "Commande inconnue : $c"; show_menu ;;
 esac

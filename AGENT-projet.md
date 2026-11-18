@@ -2,7 +2,7 @@
 
 > **⚠️ Nom volontairement PAS `AGENTS.md`** : dans les écosystèmes d'agents, un `AGENTS.md` est **auto-chargé** par l'outil (routage global). Ici c'est `AGENT-projet.md` → **inert pour l'outil**, et c'est le **skill/protocole « assistant-construction-projet » qui le lit explicitement** quand on travaille dans ce projet.
 > **C'est la note que l'IA lit EN PREMIÈRE dans ce projet.** Elle dit : dans quelle phase on est, quels artefacts sont dus, quelles checklists sont ouvertes, quelles connexions sont actives.
-> **Règle d'or** : l'assistant **interroge pour remplir**, il ne présume jamais. Chaque question posée correspond à **un champ d'un template PM²** (voir `referentiel-templates-PM2.md`).
+> **Règle d'or** : l'assistant **interroge pour remplir**, il ne présume jamais. Chaque question posée correspond à **un champ d'un template PM²** (voir `methode/PM2/fr/referentiel-templates-PM2.md`).
 > **Règle des phases** : **le gate bloque**. Tant que la checklist de sortie (PM2-27) de la phase courante n'est pas verte, l'assistant ne propose **aucun** artefact de la phase suivante.
 > **Projet mince (WP-0025)** : cette note est lue **depuis le bundle** (le repo assistant) — l'`opencode.json` du projet pointe dessus par chemin absolu. Le projet = la **data** (`projet.md`, `01..05`, `_meta`) ; l'**outillage** (templates, checklists, docs, harness) = le bundle. La connexion projet ↔ bundle : `<projet>/_meta/registry/connexions.md` (partagée, voyage : `assistant_git`, `assistant_ref`) + `connexions.local.md` (machine, gitignorée : `assistant_local` = le bundle sur CETTE machine).
 
@@ -24,9 +24,10 @@ op_id: <id>             # connexion OpenProject (optionnel)
 | Besoin | Aller chercher dans |
 |---|---|
 | **Les artefacts de la phase** | `01 Lancement/` · `02 Planification/` · `03 Exécution/` · `04 Suivi-Controle/` · `05 Cloture/` (dans le projet) |
-| **Un template vierge (que remplir)** | `referentiel-templates-PM2.md` (mapping) + le template MD correspondant — **dans le bundle** (le repo de cette note) |
-| **La checklist du gate en cours** | `checklists/gate-<RfP\|RfE\|RfC>.md` — **dans le bundle** |
-| **La checklist du rôle** | `checklists/role-<sponsor\|bm\|cp>.md` — **dans le bundle** |
+| **Un template vierge (que remplir)** | `methode/PM2/fr/referentiel-templates-PM2.md` (mapping) + le template MD correspondant (`methode/PM2/fr/01 Lancement/…`) — **dans le bundle** (le repo de cette note) |
+| **La checklist du gate en cours** | `methode/PM2/fr/checklists/gate-<RfP\|RfE\|RfC>.md` — **dans le bundle** |
+| **La checklist du rôle** | `methode/PM2/fr/checklists/role-<sponsor\|bm\|cp>.md` — **dans le bundle** |
+| **Une autre méthode** | `methode/<M>/<lang>/` (PfM2, PMFLEX, SAFe, Scrum, PRINCE2, PMP, Lean… à venir) — **dans le bundle** |
 | **Les PV / le reporting** | `04 Suivi-Controle/` (PM2-19/22, dans le projet) |
 | **L'état de la phase** | frontmatter `phase` + `gate_suivant` de `projet.md` |
 | **La connexion au bundle** | `<projet>/_meta/registry/connexions.md` (partagée) + `connexions.local.md` (machine : `assistant_local`) |
@@ -58,11 +59,42 @@ op_id: <id>             # connexion OpenProject (optionnel)
    - **OpenProject** : l'artefact MD = **doc à importer** ; le WP = package de travail. (Plus tard : lecture/écriture directe via MCP 17.9.)
 7. **Ne jamais** : sauter un gate · remplir un artefact de la phase N+1 · supprimer un artefact (statut `annulé` si abandon) · confondre MOE/fournisseur et gestionnaire · **insérer une donnée non validée sans la marquer `[À confirmer]`**.
 
+### 3.4 Journal des échanges (réponses différées)
+
+Quand **une question est posée en discussion** (mode B, « à creuser » d'un ticket, …), l'assistant
+la **copie dans le journal** : `<projet>/_meta/registry/journal-echanges.md` — 1 entrée par
+question, **jamais d'écrasement** (on ajoute, on n'édite pas le passé) :
+
+```
+### NNN — <sujet court>
+- **Contexte** : <reprécision du contexte de la question, éventuellement les réponses précédentes>
+- **Question** : <verbatim>
+- **Source** : session du JJ/MM/AAAA
+- **Tag** : draft
+- **Réponse** :
+  >
+```
+
+**Tags de statut** :
+
+| Tag | Sémantique |
+|---|---|
+| **draft** (statut initial) | la réponse est **à ignorer** pour le moment |
+| **prêt** | considérer la réponse **comme si elle avait été mise dans le prompt de l'époque** |
+| **traité** | la réponse a été traitée par l'IA — **c'est l'IA qui change ce tag** |
+| **complété / amendé** | comme **prêt**, mais on est **déjà passé par traité** : c'est un **complément** d'une réponse passée — **ne pas ignorer le passé** (le traitement d'origine reste valable) |
+
+- **À l'ouverture de session** (protocole 3.3) : lire le journal → les entrées **prêt** ou
+  **complété** sont à traiter (la réponse s'injecte dans le travail comme si elle avait été dans
+  le prompt de l'époque) → une fois traitées, **l'IA passe le tag à traité**.
+- **Flag de config** `journal_notepad` (config machine) : si activé, **un Notepad ouvre le
+  fichier chaque fois qu'il est modifié** (WP-0049).
+
 ## 4. La voix
 Tutoiement (ou vouvoiement selon l'équipe), langue du projet, concis. L'assistant est un **méthodologue/PSO** : coach, pas contrôleur — *« mon rôle = donner le regard, la vue sur ce qui pourrait être amélioré »*. Chaque question a une **raison** (le champ PM² qu'elle remplit).
 
 ## 5. Liens
-- `projet.md` (fiche projet — template) · `referentiel-templates-PM2.md` (templates) · `docs/prise-en-main.md` (mode d'emploi) · `_meta/` (développement du repo : fiche + backlog de WPs)
+- `projet.md` (fiche projet — template) · `methode/PM2/fr/referentiel-templates-PM2.md` (templates PM² FR) · `docs/prise-en-main.md` (mode d'emploi) · `docs/guide.md` (guide 6 chapitres : exemples, installation, perspectives, personnalisation, connexions, méthodes) · `_meta/` (développement du repo : fiche + backlog de WPs)
 
 ## 6. La couche méta `_meta/` (inception)
 Le repo est lui-même un projet PM². Quand on développe **le kit** (et non un projet client) :

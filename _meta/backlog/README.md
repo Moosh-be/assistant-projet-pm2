@@ -14,6 +14,7 @@ Chaque WP est un fichier Markdown : **frontmatter YAML = la partie « ticket »*
 | `titre` | texte libre | sujet du ticket |
 | `statut` | `a-faire` · `en-cours` · `bloque` · `fait` · `annule` | workflow SP / statut OP |
 | `priorite` | `haute` · `moyenne` · `basse` | priorité |
+| `type` (optionnel) | `livrable` (nouvelle fonctionnalité utilisée par l'utilisateur) · `amelioration` · `fix` — défaut : `amelioration` | type de ticket (WP-0039) |
 | `phase` | `Lancement` · `Planification` · `Execution` · `Suivi-Controle` · `Cloture` | milestone OP / tag SP |
 | `roles` | liste de `sponsor` · `bm` · `cp` · `moe` | assigné / participants |
 | `sp_id` | `""` ou id SuperProductivity | **rempli à l'export** (liaison) |

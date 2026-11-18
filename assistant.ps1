@@ -20,7 +20,9 @@
 #   bootstrap          (depuis un projet) (re)installe le bundle : pointer / chercher / installer + harness
 #   remark <texte>     (depuis un projet) journal des remarques au vol (remontee au projet assistant)
 #   commence <nom>     -> l'agent : ouvre opencode dans le projet (handoff)
-#   menu / ?           ce menu
+#   menu              les actions a envisager AU VU DE L'ETAT (projet courant ou portefeuille) - WP-0039
+#   journal-watch       watcher du journal des echanges : ouvre l'editeur de note a chaque creation/modification (WP-0049)
+#   ? / (aucun arg)    ce menu (toutes les commandes)
 #
 # Pure ASCII (Windows PowerShell 5.1 lit les .ps1 en ANSI sans BOM UTF-8).
 # La logique de scan/statut vit ICI (source unique) : les commandes opencode /ap-scan-projets /ap-statut-projet l'appellent.
@@ -51,6 +53,16 @@ function Get-MetaFolder {
   return "_meta"
 }
 $MetaFolder = Get-MetaFolder
+
+# Lit une ligne "key = value" de la config machine (vide si absente).
+function Get-ConfigKey([string]$key) {
+  if ($null -ne $Config -and (Test-Path $Config)) {
+    foreach ($l in (Get-Content $Config -Encoding UTF8)) {
+      if ($l -match '^\s*' + [regex]::Escape($key) + '\s*=\s*(.+)$') { return $Matches[1].Trim() }
+    }
+  }
+  return ""
+}
 
 # -- Helpers -------------------------------------------------------------------
 # Get-Racines : lit la ligne "racines = ..." de la config (ou fallback : registre ancien).
@@ -162,7 +174,9 @@ function Deploy-Kit([string]$target, [string]$nom) {
   }
 
   # 2) Dossiers de phases (01..05) VIDES : la data s'y ecrit, l'outillage n'y vit plus.
-  $dirs = @(Get-ChildItem -Path $Root -Directory | Where-Object { $_.Name -match '^0[0-9] ' } | ForEach-Object { $_.Name })
+  # Noms des phases = la methode PM2 FR du bundle (WP-0040 : methode/PM2/fr/).
+  # (v2 : la methode du projet (frontmatter methode:) choisira l'arbo methode/<M>/<lang>/)
+  $dirs = @(Get-ChildItem -Path (Join-Path $Root "methode/PM2/fr") -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '^0[0-9] ' } | ForEach-Object { $_.Name })
   foreach ($d in $dirs) {
     $t = Join-Path $target $d
     if (Test-Path $t) { $skipped += "$d/" }
@@ -713,12 +727,257 @@ function Cmd-Commence([string]$name) {
   try { opencode } finally { Pop-Location }
 }
 
+# -- Menu d'etat (WP-0039) : "assistant menu" v1 --
+# Les actions a envisager AU VU DE L'ETAT :
+#   dans un projet  -> l'etat (phase, gate, avancement, A confirmer, roles, WPs, git) + les actions proposees
+#   hors projet     -> le portefeuille (projets des racines + etat du gate) + les projets a pousser
+# Meme regle que statut/scan : lecture determinee, source unique dans le moteur.
+function Get-ProjetEtat([string]$p, [bool]$lite = $false) {
+  $st = @{ phase = ""; gate = ""; gateCell = ""; avancement = ""; roles = ""; aConfirmer = 0; wps = 0; wpsHautes = ""; dirty = -1 }
+  $srcFile = Join-Path $p "projet.md"
+  if (-not (Test-Path $srcFile)) { $srcFile = Join-Path $p "$MetaFolder/fiche.md" }
+  if (-not (Test-Path $srcFile)) { return $st }
+  $fm = Read-Frontmatter $srcFile
+  $st["phase"] = "$($fm["phase"])"; $st["gate"] = "$($fm["gate_suivant"])"
+  $rl = @()
+  foreach ($k in @("sponsor","bm","cp","moe")) { if ($fm[$k] -ne "") { $rl += $k } }
+  $st["roles"] = ($rl -join ",")
+  # Table d'avancement (section 3) : la ligne de la phase courante (dus/fait + check du gate).
+  $cp = "Lan"
+  if ($st["phase"] -like "Pla*") { $cp = "Pla" } elseif ($st["phase"] -like "Ex*") { $cp = "Ex" } elseif ($st["phase"] -like "Cl*") { $cp = "Cl" }
+  $in3 = $false
+  foreach ($l in [System.IO.File]::ReadAllLines($srcFile, [System.Text.Encoding]::UTF8)) {
+    if ($l -match '^## 3\.') { $in3 = $true; continue }
+    if ($in3 -and $l -match '^## ') { break }
+    if ($in3 -and $l.TrimStart().StartsWith("|")) {
+      $cells = @(($l -split '\|') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
+      if ($cells.Count -ge 4 -and $cells[0] -ne "Phase" -and $cells[0] -notmatch '^-+$') {
+        $nm = ($cells[0] -replace '\*','').Trim()
+        if ($nm -like "$cp*") { $st["avancement"] = $cells[2]; $st["gateCell"] = $cells[3]; break }
+      }
+    }
+  }
+  if ($lite) { return $st }
+  # [A confirmer] dans les artefacts de phase : les dossiers 0* de la racine ET (WP-0040)
+  # le kit lui-meme tient les siens sous methode/<M>/<lang>/0*.
+  $n = 0
+  $pat = '[\u00C0A] confirmer'
+  # NB: -like matche la chaine ENTIERE (pas un prefixe) -> le * est obligatoire.
+  $phaseDirs = @(Get-ChildItem $p -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '0[0-9] *' })
+  $mroot = Join-Path $p "methode"
+  if (Test-Path $mroot) {
+    $phaseDirs += @(Get-ChildItem $mroot -Directory -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '0[0-9] *' })
+  }
+  foreach ($pd in $phaseDirs) {
+    foreach ($f in (Get-ChildItem $pd.FullName -Filter *.md -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch 'node_modules' })) {
+      $n += ([regex]::Matches([System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8), $pat).Count)
+    }
+  }
+  $st["aConfirmer"] = $n
+  # WPs ouverts (si le dossier est aussi un kit : <meta>/backlog).
+  $bl = Join-Path $p "$MetaFolder/backlog"
+  if (Test-Path $bl) {
+    $open = 0; $haut = @()
+    foreach ($w in (Get-ChildItem $bl -Filter 'WP-*.md' -File -ErrorAction SilentlyContinue)) {
+      $wfm = Read-Frontmatter $w.FullName
+      if ($wfm["statut"] -in @("a-faire","en-cours")) {
+        $open++
+        if ($wfm["priorite"] -eq "haute") { $haut += ($w.BaseName -replace '^WP-\d+-?','') }
+      }
+    }
+    $st["wps"] = $open
+    $st["wpsHautes"] = ($haut | Select-Object -First 3) -join ", "
+  }
+  # Repo git : fichiers modifies (dirty).
+  if (Test-Path (Join-Path $p ".git")) {
+    try {
+      $d2 = @(& git -C $p status --porcelain 2>$null | Where-Object { $_ -ne "" })
+      $st["dirty"] = $d2.Count
+    } catch { $st["dirty"] = -1 }
+  }
+  return $st
+}
+
+function Cmd-Menu {
+  $ok1 = [string][char]0x2611
+  $ok2 = [string][char]0x2705
+  $dash = [string][char]0x2014
+  $p = (Get-Location).Path
+  if (Test-ProjectDir $p) {
+    $st = Get-ProjetEtat $p
+    $leaf = Split-Path $p -Leaf
+    $green = $st["gateCell"].Contains($ok1) -or $st["gateCell"].Contains($ok2)
+    Write-Host ""
+    Write-Host "=== Menu : $leaf  (les actions a envisager au vu de l'etat) ==="
+    Write-Host ("  Phase : {0}   |   Gate : {1}   |   Avancement : {2}   |   Gate check : {3}" -f $st["phase"], $st["gate"], $st["avancement"], $st["gateCell"])
+    $prop = @()
+    if (-not $green) {
+      $prop += ("Terminer la phase : le prochain artefact du referentiel (mode B/C)  ->  commence {0}   (ou : opencode dans le projet)" -f $leaf)
+      $prop += "Verifier la checklist du gate : methode/PM2/fr/checklists/gate-$($st["gate"]).md (dans le bundle)"
+    }
+    if ([int]$st["aConfirmer"] -gt 0) { $prop += "Valider les $($st["aConfirmer"]) items [A confirmer] (preuve, pas invention - chacun a sa source)" }
+    if ($st["roles"] -eq "") { $prop += "Identifier les 4 roles piliers (sponsor / bm / cp / moe) - requis pour le gate" }
+    if ([int]$st["wps"] -gt 0) {
+      $w = "WPs ouverts : $($st["wps"])  (_meta/backlog/)"
+      if ($st["wpsHautes"] -ne "") { $w += "   haute priorite : $($st["wpsHautes"])" }
+      $prop += $w
+    }
+    if ($st["dirty"] -ge 0 -and [int]$st["dirty"] -gt 0) { $prop += "Commit / push : $($st["dirty"]) fichiers modifies (repo git)" }
+    $prop += "Verifier le bundle + le harness  ->  sync"
+    $prop += "Noter une remarque au vol  ->  remark '<texte>'"
+    Write-Host ""
+    Write-Host "  Actions a envisager :"
+    $n = 0
+    foreach ($x in $prop) { $n++; Write-Host ("  {0}. {1}" -f $n, $x) }
+    Write-Host ""
+    Write-Host "  (detail : statut   -   toutes les commandes : ?)"
+  } else {
+    Write-Host ""
+    Write-Host "=== Menu : portefeuille  (hors projet - au vu de l'etat des racines) ==="
+    $roots = @(Get-Racines)
+    if ($roots.Count -eq 0) {
+      Write-Host "  Aucune racine definie  ->  install.ps1 (definir les racines)."
+    } else {
+      $rows = @()
+      foreach ($r in $roots) {
+        if (-not (Test-Path $r)) { continue }
+        foreach ($d in (Get-ChildItem $r -Directory -ErrorAction SilentlyContinue)) {
+          if (-not (Test-ProjectDir $d.FullName)) { continue }
+          $st = Get-ProjetEtat $d.FullName $true
+          $green = $st["gateCell"].Contains($ok1) -or $st["gateCell"].Contains($ok2)
+          $state = "?"
+          if ($green) { $state = "gate VERT" }
+          elseif ($st["gateCell"] -ne "" -and ($st["gateCell"].StartsWith($dash) -or $st["gateCell"].StartsWith("-"))) { $state = "sans gate" }
+          elseif ($st["gateCell"] -ne "") { $state = "gate ROUGE" }
+          $rows += [pscustomobject]@{ Nom = $d.Name; Phase = $st["phase"]; Gate = $st["gate"]; Etat = $state }
+        }
+      }
+      if ($rows.Count -eq 0) {
+        Write-Host "  Aucun projet trouve dans les racines  ->  scan (les espaces inconnus)."
+      } else {
+        Write-Host ("  {0,-28} {1,-14} {2,-8} {3}" -f "nom", "phase", "gate", "etat")
+        foreach ($row in $rows) { Write-Host ("  {0,-28} {1,-14} {2,-8} {3}" -f $row.Nom, $row.Phase, $row.Gate, $row.Etat) }
+        $rouges = @($rows | Where-Object { $_.Etat -eq "gate ROUGE" })
+        if ($rouges.Count -gt 0) {
+          Write-Host ""
+          Write-Host ("  A pousser (gate non vert) : {0} projet(s) :" -f $rouges.Count)
+          foreach ($row in ($rouges | Select-Object -First 5)) { Write-Host ("    - {0}   ({1} / {2})" -f $row.Nom, $row.Phase, $row.Gate) }
+        }
+      }
+    }
+    $n = 0
+    Write-Host ""
+    Write-Host "  Actions a envisager :"
+    foreach ($x in @("Les espaces inconnus des racines  ->  scan",
+                     "La liste des projets (nom + phase + gate)  ->  liste",
+                     "Le detail d'un projet  ->  statut <nom>",
+                     "Travailler un projet avec l'agent  ->  commence <nom>   (ouvre opencode)",
+                     "Creer un projet MINCE  ->  new <nom> [racine]   (-doc : sans code)",
+                     "Ajouter l'assistant a un projet existant  ->  add <dossier>")) { $n++; Write-Host ("  {0}. {1}" -f $n, $x) }
+    Write-Host ""
+    Write-Host "  (toutes les commandes : ?)"
+  }
+}
+
+# -- journal-watch (WP-0049) ---------------------------------------------------------
+# Watcher du journal des echanges : ouvre l'editeur de note (config note_editor) a chaque
+# creation/modification du journal. Polling 2s (mtime + size). Sans argument = demarrer
+# (idempotent) ; -statut ; -stop ; -run = mode interne (process detache).
+function Cmd-JournalWatch([string[]]$ex) {
+  if ($ex.Count -ge 1 -and $ex[0] -eq "-run") {
+    if ($ex.Count -lt 4) { Write-Host "usage (interne): journal-watch -run <journal> <editor> <pidfile>"; return }
+    $j = $ex[1]; $ed = $ex[2]; $pf = $ex[3]
+    Set-Content -Path $pf -Value $PID -Encoding ASCII
+    $last = $null
+    if (Test-Path $j) { $fi = Get-Item $j; $last = "$($fi.LastWriteTimeUtc.Ticks):$($fi.Length)" }
+    while ($true) {
+      Start-Sleep -Seconds 2
+      $cur = $null
+      if (Test-Path $j) { $fi = Get-Item $j; $cur = "$($fi.LastWriteTimeUtc.Ticks):$($fi.Length)" }
+      if ($null -ne $cur -and $cur -ne $last) {
+        Start-Process -FilePath $ed -ArgumentList "`"$j`"" -ErrorAction SilentlyContinue
+        $last = $cur
+      }
+      if ($null -eq $cur) { $last = $null }
+    }
+    return
+  }
+  $flag = Get-ConfigKey "journal_notepad"
+  $editor = Get-ConfigKey "note_editor"
+  # journal = du projet courant (ou de la racine du kit si hors projet)
+  $p = (Get-Location).Path
+  $root = $p
+  if (-not (Test-ProjectDir $p)) { $root = $Root }
+  $journal = Join-Path $root ((Get-MetaFolder) + "/registry/journal-echanges.md")
+  # pidfile deterministe : hash du chemin CANNONIQUE du journal (partage entre PS et bash)
+  $hpath = $journal -replace '\\','/'
+  $hash = [System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($hpath))).Replace("-","").Substring(0,12).ToLower()
+  $pidfile = Join-Path $env:TEMP "assistant-jw-$hash.pid"
+  $sub = ""; if ($ex.Count -ge 1) { $sub = $ex[0] }
+  if ($sub -eq "-statut" -or $sub -eq "-stop") {
+    $pidv = 0
+    if (Test-Path $pidfile) {
+      $raw = (Get-Content $pidfile -Raw).Trim()
+      if ($raw -match '^\d+$') { $pidv = [int]$raw }
+    }
+    if ($sub -eq "-statut") {
+      if ($pidv -gt 0 -and (Get-Process -Id $pidv -ErrorAction SilentlyContinue)) {
+        Write-Host "watcher du journal EN COURS (PID $pidv) : $journal"
+      } elseif ($pidv -gt 0) {
+        Write-Host "watcher du journal : PID $pidv mort (pidfile stale) - relancer journal-watch"
+      } else {
+        Write-Host "watcher du journal : PAS en cours ($journal)"
+      }
+      return
+    }
+    if ($pidv -gt 0 -and (Get-Process -Id $pidv -ErrorAction SilentlyContinue)) {
+      Stop-Process -Id $pidv -ErrorAction SilentlyContinue
+      Write-Host "watcher du journal ARRETE (PID $pidv)"
+    } elseif ($pidv -gt 0) {
+      Write-Host "watcher du journal : deja mort (PID $pidv)"
+    } else {
+      Write-Host "watcher du journal : rien a arreter"
+    }
+    Remove-Item $pidfile -Force -ErrorAction SilentlyContinue
+    return
+  }
+  # demarrage (idempotent)
+  if ($flag -ne "oui" -and $flag -ne "yes" -and $flag -ne "true" -and $flag -ne "1") {
+    Write-Host "journal_notepad n'est pas active dans la config machine (journal_notepad = $flag)"
+    Write-Host "  -> ajouter dans .assistant.config :  journal_notepad = oui"
+    return
+  }
+  if ($editor -eq "") {
+    Write-Host "note_editor manquant dans la config machine (.assistant.config)"
+    Write-Host "  -> ajouter :  note_editor = <chemin de l'editeur de note>"
+    return
+  }
+  if (Test-Path $pidfile) {
+    $raw = (Get-Content $pidfile -Raw).Trim()
+    if ($raw -match '^\d+$' -and (Get-Process -Id ([int]$raw) -ErrorAction SilentlyContinue)) {
+      Write-Host "watcher du journal DEJA en cours (PID $raw) : $journal"
+      return
+    }
+  }
+  $ps1 = Join-Path $Root "assistant.ps1"
+  $proc = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile","-WindowStyle","Hidden","-ExecutionPolicy","Bypass","-File",$ps1,"journal-watch","-run",$journal,$editor,$pidfile) -PassThru
+  Start-Sleep -Milliseconds 800
+  if (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue) {
+    Write-Host "watcher du journal demarre (PID $($proc.Id)) : $journal"
+    Write-Host "  -> l'editeur s'ouvrira a chaque creation/modification du journal (polling 2s)"
+    Write-Host "  -> arret : assistant journal-watch -stop   -   statut : assistant journal-watch -statut"
+  } else {
+    Write-Host "ATTENTION : demarrage du watcher echoue - relancer journal-watch"
+  }
+}
+
 function Show-Menu {
   Write-Host ""
   Write-Host "================================================"
   Write-Host " assistant - menu  (sans IA : rapide, gratuit)"
   Write-Host "================================================"
   Write-Host "  PM2 : Lancement -> Planification -> Execution -> Cloture  (1 gate = 1 checklist par phase)"
+  Write-Host "  methode/ : les methodes (PM2/fr - a venir : PfM2, PMFLEX, SAFe, Scrum, PRINCE2, Lean...)"
   Write-Host ""
   Write-Host "  -- Gerer les projets (depuis le kit ou les racines) --"
   Write-Host "  scan                 les projets des racines : assistes (mince / copie complete) / pourraient / sans signal"
@@ -734,7 +993,9 @@ function Show-Menu {
   Write-Host "  bootstrap          (re)installer le bundle sur cette machine : pointer / chercher / installer + harness"
   Write-Host "  remark <texte>       journal des remarques au vol (remontee au projet assistant)"
   Write-Host "  commence <nom>       -> L'AGENT : ouvre opencode dans le projet (conduite, mode B/C)"
-  Write-Host "  menu / ?             ce menu"
+  Write-Host "  menu               les actions a envisager AU VU DE L'ETAT (projet courant ou portefeuille) - WP-0039"
+  Write-Host "  journal-watch [-statut|-stop]  watcher du journal des echanges : ouvre l'editeur (note_editor) a chaque creation/modification - WP-0049"
+  Write-Host "  ? / (aucun arg)      ce menu (toutes les commandes)"
   Write-Host ""
 }
 
@@ -761,6 +1022,8 @@ switch -regex ($c) {
   '^bootstrap$' { $ex = @(); if ($args.Count -ge 2) { $ex = @($args[1..($args.Count - 1)]) }; Cmd-Bootstrap $ex }
   '^remark$' { Cmd-Remarque $args[1] }
   '^commence$' { Cmd-Commence $args[1] }
-  '^menu$|^\?$' { Show-Menu }
+  '^menu$' { Cmd-Menu }
+  '^journal-watch$' { $ex = @(); if ($args.Count -ge 2) { $ex = @($args[1..($args.Count - 1)]) }; Cmd-JournalWatch $ex }
+  '^\?$' { Show-Menu }
   default { Write-Host "Commande inconnue : $c"; Show-Menu }
 }

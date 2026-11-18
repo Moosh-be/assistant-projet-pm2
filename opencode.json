@@ -1,5 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "assistant-projet",
-  "instructions": ["AGENT-projet.md", "projet.md"]
+  "instructions": ["AGENT-projet.md", "projet.md"],
+  "mcp": {
+    "servers": {
+      "home-assistant": {
+        "type": "remote",
+        "url": "http://homeassistant.local:8123/api/mcp",
+        "headers": {
+          "Authorization": "Bearer {file:C:/Users/ctg/.ha-token}"
+        },
+        "disabled": true
+      }
+    }
+  }
 }
