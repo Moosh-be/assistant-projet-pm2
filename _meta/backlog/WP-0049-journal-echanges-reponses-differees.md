@@ -42,7 +42,7 @@ doit la prendre en compte, via le **tag**.
 
 - [x] **Règle dans le protocole** : `AGENT-projet.md` §3.4 « Journal des échanges » (18/11)
 - [x] **Le fichier** : `_meta/registry/journal-echanges.md` (format d'entrée + 5 entrées seed **draft** = les 5 questions « à creuser » du WP-0048)
-- [ ] **Flag `journal_notepad`** : l'éditeur ouvre le fichier à chaque création/modification (automation déterministe — hook, sans IA) — **config pré-posée le 18/11 (demande utilisateur)** : `journal_notepad = oui` + `note_editor = C:\Users\ctg\PortableApps\Notepad++Portable\Notepad++Portable.exe` dans les **2 copies** (dev + bundle = tous les projets)
+- [x] **Flag `journal_notepad`** : l'éditeur ouvre le fichier à chaque création/modification (automation déterministe — **hook `journal-watch`**, sans IA) — **config posée le 18/11 (demande utilisateur)** : `journal_notepad = oui` + `note_editor = C:\Users\ctg\PortableApps\Notepad++Portable\Notepad++Portable.exe` dans les **2 copies** (dev + bundle = tous les projets). **En production le 18/11** : watcher natif PS+bash (polling 2 s sur mtime+taille, pidfile partagé entre les 2 moteurs = PID Windows réel) — **preuve terrain** : journal touché 19:09:23 → Notepad++Portable ouvert 19:09:24
 - [ ] **Moteur** : `menu` / `statut` affichent les entrées **à traiter** (prêt / complété) et le compteur par tag (PS + bash, parité)
 - [ ] **Cycle d'usage réel** : 1ʳᵉ réponse d'utilisateur (1 des 5 entrées seed) → tag prêt → l'IA la traite et passe traité (validation terrain du mécanisme)
 
@@ -54,3 +54,24 @@ doit la prendre en compte, via le **tag**.
   (traité) n'est jamais invalidé, seulement **complété**.
 - Le **répair** du parser (WP-0048 : « un document ne doit jamais être cassé ») et ce journal
   partagent le même principe : l'écriture ne détruit jamais.
+
+## Implémentation du hook (18/11 — en production)
+
+- **Commandes** (PS + bash, parité) : `assistant journal-watch` (start, idempotent) · `-statut` · `-stop` —
+  fonctionnent **cross-moteur** (un watcher né sous bash est vu et arrêté par PS et inversement).
+- **Pidfile partagé** : `%TEMP%/assistant-jw-<hash>.pid`, hash = MD5 du chemin du journal → les deux
+  moteurs calculent le même. Il contient le **PID Windows réel** : sous MINGW `$$`/`$!` sont des PIDs
+  **virtuels** (invisible de `tasklist`/WMI) → le lanceur bash génère un `token`
+  (`jw-<ts>-$RANDOM`) passé au fils, et le retrouve via WMI
+  (`Get-CimInstance Win32_Process -Filter "Name='bash.exe'" | CommandLine -like *token*`, retries 6 s).
+- **Démarrage** : `nohup … </dev/null` — **`</dev/null` obligatoire** : sans stdin détaché, le watcher
+  meurt quand la console du lanceur est détruite.
+- **Cross-session MINGW** : `kill -0` ne voit pas les process d'une autre session console →
+  helpers `pid_alive()` (`tasklist //FI "PID eq …"`) et `kill_pid()` (`taskkill //PID //F`).
+- **Ouverture de l'éditeur** : lancement direct en arrière-plan `"$ed" "$j" &` — sur ce build MSYS,
+  `start ""` **tronque** la ligne de commande Windows (testé : cmd interactif ouvert, bat non exécuté).
+- **Bugs PS fixés** : `New-Object … MD5` (classe abstraite) → `[System.Security.Cryptography.MD5]::Create()` ;
+  `[System.Diagnostics.Process]::Id` vide → `$PID`.
+- **Bug préexistant trouvé pendant l'audit CRLF** (fixé) : le pattern du dispatch bash
+  `"\?")` (quote) ne matchait **jamais** `?` (ni en LF ni en CRLF) → « Commande inconnue : ? » ;
+  corrigé `\?)` (non quote, OK LF et CRLF). Voir `registry/decisions.md` 18/11.

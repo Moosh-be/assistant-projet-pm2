@@ -1093,6 +1093,6 @@ case "$c" in
   commence) cmd_commence "${2:-}" ;;
   menu) cmd_menu ;;
   journal-watch) shift; cmd_journal_watch "$@" ;;
-  "\?") show_menu ;;
+  \?) show_menu ;;
   *) echo "Commande inconnue : $c"; show_menu ;;
 esac
