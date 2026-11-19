@@ -34,7 +34,7 @@
    ```
    ./assistant.sh sync        # (ou .\assistant.ps1 sync) — idempotent
    ```
-   Le harness = la copie machine de `.opencode/` du bundle + le `opencode.json` du projet (instructions → `AGENT-projet.md` **du bundle** par chemin absolu + `projet.md`).
+   Le harness = la copie machine de `.opencode/` du bundle (**agent** + **slash-commandes**) + le `opencode.json` du projet (instructions → `AGENT-projet.md` **du bundle** par chemin absolu + **skills → `.opencode/skills` du bundle** — les skills sont **pointées, jamais copiées** : toujours frais, WP-0050 + `projet.md`).
 4. **Ouvrir la session agent** :
    ```
    opencode            # dans le dossier projet

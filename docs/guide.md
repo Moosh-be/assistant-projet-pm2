@@ -116,9 +116,10 @@ interchangeables : n'importe quel **agent qui lit un dossier Markdown** + n'impo
 2. **Config machine** : `.assistant.config` à la racine du kit (gitignorée) — `meta_folder`
    (défaut `_meta`), les racines, les connexions.
 3. **Dans chaque projet** (créé par `new`/`add`) : lanceur mince (`assistant.ps1`/`.sh`),
-   bootstrap, `opencode.json` pointant sur l'`AGENT-projet.md` **du bundle** (chemin absolu)
-   + copie machine du harness (`.opencode/`, créée par `sync` / `bootstrap`). Le projet ne porte
-   pas lui-même le protocole.
+   bootstrap, `opencode.json` pointant sur l'`AGENT-projet.md` **du bundle** + les **skills**
+   du bundle (`.opencode/skills`, chemin absolu — **pointées, jamais copiées** : WP-0050)
+   + copie machine du harness (`.opencode/agent` + `.opencode/command`, créée par `sync` /
+   `bootstrap`). Le projet ne porte pas lui-même le protocole.
 
 ### 2.4 Versionnement du bundle
 
@@ -180,7 +181,10 @@ RTBF. Politique **one-way** : les customisations RTBF ne reviennent pas dans le 
   `AGENTS.md`** — dans les écosystèmes d'outils agent, un `AGENTS.md` est auto-chargé et
   capturerait tout le contexte global ; ici c'est le protocole qui la lit explicitement.
 - **Harness par projet** : `.opencode/` (agent `assistant-projet` + slash-commandes) — déployé
-  par `sync` / `bootstrap`, pointé par l'`opencode.json` du projet.
+  par `sync` / `bootstrap`, pointé par l'`opencode.json` du projet. Les **skills** (`ap-pm2-*`)
+  ne se copient pas : l'`opencode.json` du projet les **pointe** dans le bundle
+  (`"skills": ["<bundle>/.opencode/skills"]`) — une copie deviendrait stale à chaque
+  régénération ; pointée, elle est toujours fraîche (WP-0050).
 - **Convention des noms** : noms ASCII (`04 Suivi-Controle`, `05 Cloture`, `methode`),
   frontmatter YAML machine + corps lisible, `[À confirmer]` + source sur toute donnée non validée.
 

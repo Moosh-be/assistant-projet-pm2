@@ -218,7 +218,7 @@ deploy_kit() {
   # 6) opencode.json : le harness pointe le protocole DANS LE BUNDLE (chemin absolu, en /)
   if [ -e "$target/opencode.json" ]; then skipped+=("opencode.json")
   else
-    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"]\n}\n' "$(conf_path "$ROOT")" > "$target/opencode.json"
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"],\n  "skills": ["%s/.opencode/skills"]\n}\n' "$(conf_path "$ROOT")" "$(conf_path "$ROOT")" > "$target/opencode.json"
     copied=$((copied+1))
   fi
 
@@ -233,7 +233,8 @@ deploy_kit() {
 deploy_harness() {
   local target="$1" bundle="$2" meta="$3"
   local sub src dst rel mdir
-  # 1) .opencode/agent + command (fichiers manquants, récursif)
+  # 1) .opencode/agent + command (fichiers manquants, récursif) — les SKILLS ne se copient PAS :
+  #    l'opencode.json du projet les pointe dans le bundle (champ "skills", toujours frais)
   for sub in agent command; do
     src="$bundle/.opencode/$sub"
     [ -d "$src" ] || continue
@@ -253,7 +254,7 @@ deploy_harness() {
   # 2) opencode.json (créé si absent - JAMAIS écrasé : il pointe le bundle de CETTE machine)
   local oc="$target/opencode.json"
   if [ ! -e "$oc" ]; then
-    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"]\n}\n' "$(conf_path "$bundle")" > "$oc"
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"],\n  "skills": ["%s/.opencode/skills"]\n}\n' "$(conf_path "$bundle")" "$(conf_path "$bundle")" > "$oc"
     printf 'opencode.json\n'
   fi
   # 3) .gitignore : les lignes machine (append, jamais d'écrasement)
@@ -345,7 +346,7 @@ cmd_sync() {
   local need=0
   { [ ! -f "$ocagent" ] || [ ! -f "$ocjson" ]; } && need=1
   if [ "$force" = "--force-harness" ]; then
-    echo "  Harness : --force-harness -> régénération depuis le bundle (remplace .opencode/agent+command + opencode.json)."
+    echo "  Harness : --force-harness -> régénération depuis le bundle (remplace .opencode/agent+command + opencode.json, skills pointées)."
     printf '  Confirmer ? (o/n) '
     local a; IFS= read -r a || a=""
     case "$a" in
@@ -361,7 +362,7 @@ cmd_sync() {
   elif [ $need -eq 1 ]; then
     echo "  Harness : incomplet/absent (à ajouter, zéro écrasement) :"
     [ -f "$ocagent" ] || echo "    + .opencode/agent/ + .opencode/command/  (copies du bundle)"
-    [ -f "$ocjson" ] || echo "    + opencode.json  (instructions -> AGENT-projet.md du bundle + projet.md)"
+    [ -f "$ocjson" ] || echo "    + opencode.json  (instructions -> AGENT-projet.md du bundle + skills -> .opencode/skills du bundle + projet.md)"
     echo "    + .gitignore  (lignes machine, en append)"
     printf '  Déployer ? (o/n) '
     local a2; IFS= read -r a2 || a2=""

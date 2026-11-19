@@ -233,7 +233,7 @@ deploy_harness() { # deploy_harness <bundle>
   done
   local oc="$proj/opencode.json"
   if [ ! -f "$oc" ]; then
-    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"]\n}\n' "$(conf_path "$bundle")" > "$oc"
+    printf '{\n  "$schema": "https://opencode.ai/config.json",\n  "default_agent": "assistant-projet",\n  "instructions": ["%s/AGENT-projet.md", "projet.md"],\n  "skills": ["%s/.opencode/skills"]\n}\n' "$(conf_path "$bundle")" "$(conf_path "$bundle")" > "$oc"
     printf 'opencode.json\n'
   fi
   local gi="$proj/.gitignore"

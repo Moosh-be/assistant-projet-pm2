@@ -204,10 +204,15 @@ function Deploy-Harness([string]$bundle) {
   $ocJson = Join-Path $proj "opencode.json"
   if (-not (Test-Path $ocJson)) {
     $bs = $bundle -replace '\\','/'
+    # Idem assistant.ps1 : les 2 lignes a concat se pre-computent en etats 1-ligne
+    # (sur cette machine, le parser PS casse un "+" a l'interieur d'un array multi-elements).
+    $li = '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"],'
+    $ls = '  "skills": ["' + $bs + '/.opencode/skills"]'
     $jl = @('{',
       '  "$schema": "https://opencode.ai/config.json",',
       '  "default_agent": "assistant-projet",',
-      '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"]',
+      $li,
+      $ls,
       '}')
     [System.IO.File]::WriteAllText($ocJson, (($jl -join "`n") + "`n"), $utf8)
     $added += "opencode.json"

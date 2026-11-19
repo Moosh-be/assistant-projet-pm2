@@ -39,25 +39,26 @@
 - **Contexte** : WP-0048 (espace des normes, à creuser) — PMBOK et PRINCE2 figurent dans la liste des *méthodes* « à venir » (décision 17/11, WP-0040) **et** en *normes* de gouvernance (18/11).
 - **Question** : qu'est-ce qui fait qu'un référentiel est une **méthode** vs une **norme** ?
 - **Source** : session du 18/11/2026
-- **Tag** : draft
+- **Tag** : traité
 - **Réponse** :
-  >
+  > ce sont des méthodes, et elle seront présentée à titre d'exemple mais  pour le moment elle ne m'intéressent pas (surtout qu'elles ne sont pas "libres"  
 
 ### 002 — WP-0048 : arbo de l'espace normes/ (+ versions)
 - **Contexte** : WP-0048 — par analogie avec `methode/<M>/<lang>/` + versions (WP-0045).
 - **Question** : quelle **arbo** pour l'espace `normes/` (et le traitement des **versions**) ?
 - **Source** : session du 18/11/2026
-- **Tag** : draft
-- **Réponse** :
-  >
+- **Tag** : traité
+- **Réponse** : 
+  > je réfléchi encore,   ce sont des Markdown avec un frontmatter qui contient l'info. L'arborescence est juste pour rendre le truc plus facile quand on travaille à la main. je me demande aussi comment gérer ce qui vient du repo et ce qui est "local", j'ai l'impression que je vais devoir faire plusieurs repos, et l'installeur   va faire un checkout de chaque méthode, et norme demandée
+ 
 
 ### 003 — WP-0048 : ce qu'est un « objet métier » dans le kit
 - **Contexte** : WP-0048 — les normes définissent les informations attendues de chaque Markdown (objet métier).
 - **Question** : qu'est-ce qu'un **« objet métier »** dans le kit (un **livrable** ? un **artefact** ? un **objet BIM** ?)
 - **Source** : session du 18/11/2026
-- **Tag** : draft
-- **Réponse** :
-  >
+- **Tag** : traité
+- **Réponse** : 
+  >objet  métier c'est justement le terme neutre pour tout ca, et ce sont les propriétés activées qui définissent le type. J'ai déjà expliqué ca mais c'est peut-être dans mon 2ndB ou dans le projet https://github.com/Moosh-be/unofficial-work-structure-dictionary/
 
 ### 004 — WP-0048 : format des normes
 - **Contexte** : WP-0048 — la norme doit être **lisible par la machine** pour l'outil de validation (position assistant, 18/11 : un template qui *déclare* les informations attendues).

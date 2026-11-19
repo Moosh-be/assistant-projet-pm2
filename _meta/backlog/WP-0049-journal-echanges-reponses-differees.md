@@ -44,7 +44,7 @@ doit la prendre en compte, via le **tag**.
 - [x] **Le fichier** : `_meta/registry/journal-echanges.md` (format d'entrée + 5 entrées seed **draft** = les 5 questions « à creuser » du WP-0048)
 - [x] **Flag `journal_notepad`** : l'éditeur ouvre le fichier à chaque création/modification (automation déterministe — **hook `journal-watch`**, sans IA) — **config posée le 18/11 (demande utilisateur)** : `journal_notepad = oui` + `note_editor = C:\Users\ctg\PortableApps\Notepad++Portable\Notepad++Portable.exe` dans les **2 copies** (dev + bundle = tous les projets). **En production le 18/11** : watcher natif PS+bash (polling 2 s sur mtime+taille, pidfile partagé entre les 2 moteurs = PID Windows réel) — **preuve terrain** : journal touché 19:09:23 → Notepad++Portable ouvert 19:09:24
 - [ ] **Moteur** : `menu` / `statut` affichent les entrées **à traiter** (prêt / complété) et le compteur par tag (PS + bash, parité)
-- [ ] **Cycle d'usage réel** : 1ʳᵉ réponse d'utilisateur (1 des 5 entrées seed) → tag prêt → l'IA la traite et passe traité (validation terrain du mécanisme)
+- [x] **Cycle d'usage réel** : 1ʳᵉ réponse d'utilisateur (1 des 5 entrées seed) → tag prêt → l'IA la traite et passe traité (validation terrain du mécanisme) — **fait 18/11** : 3 réponses (journal 001–003) traitées à l'ouverture de session → intégrées au WP-0048, tags passés à **traité**
 
 ## Notes
 

@@ -249,10 +249,15 @@ function Deploy-Kit([string]$target, [string]$nom) {
   if (Test-Path $ocJson) { $skipped += "opencode.json" }
   else {
     $bs = $Root -replace '\\','/'
+    # Les 2 lignes a concat se pre-computent en etats 1-ligne : sur cette machine, le parser PS
+    # casse un "+" a l'interieur d'un array multi-elements (regression, test 19/11) -> JSON invalide.
+    $li = '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"],'
+    $ls = '  "skills": ["' + $bs + '/.opencode/skills"]'
     $jl = @('{',
       '  "$schema": "https://opencode.ai/config.json",',
       '  "default_agent": "assistant-projet",',
-      '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"]',
+      $li,
+      $ls,
       '}')
     [System.IO.File]::WriteAllText($ocJson, (($jl -join "`n") + "`n"), $utf8)
     $copied += 1
@@ -267,7 +272,8 @@ function Deploy-Kit([string]$target, [string]$nom) {
 function Deploy-Harness([string]$target, [string]$bundle, [string]$meta) {
   $utf8 = New-Object System.Text.UTF8Encoding($false)
   $added = @()
-  # 1) .opencode/agent + command (fichiers manquants, recursif)
+  # 1) .opencode/agent + command (fichiers manquants, recursif) — les SKILLS ne se copient PAS :
+  #    l'opencode.json du projet les pointe dans le bundle (champ "skills", toujours frais)
   foreach ($sub in @("agent","command")) {
     $src = Join-Path $bundle ".opencode/$sub"
     if (-not (Test-Path $src)) { continue }
@@ -288,10 +294,14 @@ function Deploy-Harness([string]$target, [string]$bundle, [string]$meta) {
   $ocJson = Join-Path $target "opencode.json"
   if (-not (Test-Path $ocJson)) {
     $bs = $bundle -replace '\\','/'
+    # Idem Deploy-Kit : concat en etats 1-ligne (le parser PS casse le "+" dans les arrays).
+    $li = '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"],'
+    $ls = '  "skills": ["' + $bs + '/.opencode/skills"]'
     $jl = @('{',
       '  "$schema": "https://opencode.ai/config.json",',
       '  "default_agent": "assistant-projet",',
-      '  "instructions": ["' + $bs + '/AGENT-projet.md", "projet.md"]',
+      $li,
+      $ls,
       '}')
     [System.IO.File]::WriteAllText($ocJson, (($jl -join "`n") + "`n"), $utf8)
     $added += "opencode.json"
@@ -401,7 +411,7 @@ function Cmd-Sync([bool]$forceHarness) {
   $ocJson = Join-Path $p "opencode.json"
   $need = (-not (Test-Path $ocAgent)) -or (-not (Test-Path $ocJson))
   if ($forceHarness) {
-    Write-Host "  Harness : --force-harness -> regeneration depuis le bundle (remplace .opencode/agent+command + opencode.json)."
+    Write-Host "  Harness : --force-harness -> regeneration depuis le bundle (remplace .opencode/agent+command + opencode.json, skills pointees)."
     $a = Read-Host "  Confirmer ? (o/n)"
     if ($a -eq "o" -or $a -eq "oui" -or $a -eq "yes" -or $a -eq "y") {
       foreach ($sub in @("agent","command")) { $d = Join-Path $p ".opencode/$sub"; if (Test-Path $d) { Remove-Item $d -Recurse -Force } }
@@ -412,7 +422,7 @@ function Cmd-Sync([bool]$forceHarness) {
   } elseif ($need) {
     Write-Host "  Harness : incomplet/absent (a ajouter, zero ecrasement) :"
     if (-not (Test-Path $ocAgent)) { Write-Host "    + .opencode/agent/ + .opencode/command/  (copies du bundle)" }
-    if (-not (Test-Path $ocJson)) { Write-Host "    + opencode.json  (instructions -> AGENT-projet.md du bundle + projet.md)" }
+    if (-not (Test-Path $ocJson)) { Write-Host "    + opencode.json  (instructions -> AGENT-projet.md du bundle + skills -> .opencode/skills du bundle + projet.md)" }
     Write-Host "    + .gitignore  (lignes machine, en append)"
     $a = Read-Host "  Deployer ? (o/n)"
     if ($a -eq "o" -or $a -eq "oui" -or $a -eq "yes" -or $a -eq "y") {

@@ -1,0 +1,41 @@
+---
+name: "PM2-05.P — Matrice des parties prenantes"
+description: "Remplir / relire le PM2-05.P Matrice des parties prenantes (02 Planification, gate RfE) : questions d'entretien, discipline [À confirmer] + source, mise à jour frontmatter et phase. À utiliser quand on travaille ce document dans un projet assisté."
+---
+
+# PM2-05.P — Matrice des parties prenantes (skill de remplissage)
+
+> **1 skill = 1 document de méthode** (WP-0050). Le **template** (structure, champs) = source de
+> vérité : `methode/PM2/fr/02 Planification/PM2-05.P-matrice-des-parties-prenantes.md` (bundle). Ce skill = le **protocole de remplissage** de ce
+> document ; le protocole commun (modes A/B/C, annonce de session, journal des échanges) :
+> `AGENT-projet.md` §3 (bundle).
+
+## Position
+
+- **Phase** : 02 Planification · **Gate** : RfE
+- **Dans le cycle** : PM2-04 · PM2-05 · PM2-06 · PM2-07 · PM2-08 · PM2-09 · PM2-10
+- **Dans le projet** : `02 Planification/PM2-05.P-*.md` (1 projet = 1 folder ; les templates vivent dans le bundle).
+  Absent du projet → le **créer depuis le template du bundle** (copie) ; présent → on
+  **complète** (jamais d'écrasement).
+
+## Questions de l'entretien (du template §2 — au fil de l'eau, quand les données viennent)
+
+- Qui est impacté par le projet (liste) ?
+- Qui a le pouvoir d'aider ou de bloquer ?
+- Qui est favorable / neutre / défavorable ? À quoi reconnaît-on ça ?
+- Quelle posture avec chacun (informer, consulter, impliquer, manager de près) ?
+
+## Protocole de remplissage
+
+1. **Mode B** : une question à la fois, quand la donnée vient (pas un interrogatoire en bloc).
+2. **Ne jamais inventer** : donnée absente → on la demande ; donnée déduite → `[À confirmer]` + sa `source`.
+3. **À chaque remplissage** : frontmatter de l'artefact (`statut` · `date_maj` · `source`) +
+   sa section « Statut de remplissage ».
+4. **La phase** : tableau §3 de `projet.md` (artefacts faits / dus) — mis à jour par l'assistant.
+5. **Mode C** : une donnée qui tombe dans un échange → la proposer dans ce document
+   (inscription avec sa `source` : « échange du JJ/MM »).
+
+## Gate
+
+- Cet artefact alimente la checklist **RfE** (PM2-27) : `checklists/gate-RfE.md` (bundle).
+- Règle du gate : tant que la checklist n'est pas verte, **aucun artefact de la phase suivante**.
