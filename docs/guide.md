@@ -240,12 +240,14 @@ binaire + token à prévoir). HA (Home Assistant) : jamais dans un espace projet
 
 ```
 methode/
-├── PM2/fr/            ← PM² français (aujourd'hui, la seule méthode)
+├── PM2/fr/            ← PM² français (méthode projet de référence)
 │   ├── 01 Lancement/ … 05 Cloture/   (templates PM2-01…33)
 │   ├── checklists/          (gate-RfP/RfE/RfC, role-*)
 │   └── referentiel-templates-PM2.md
+├── GestionImpactHumain/fr/  ← le côté humain du changement (GIH-01…07, transverse)
 ├── PfM2/fr/           ← à venir : gestion du portefeuille
 ├── PMFLEX/fr/         ← à venir
+├── prosci/            ← slot « avec licence » (notice + contenu local-only, jamais poussé)
 └── (SAFe, Scrum, PRINCE2, PMP, Lean, Lean6Sigma…) ← places réservées
 ```
 
@@ -262,3 +264,16 @@ Les projets **minces** gardent leurs `01..05` **à leur racine** (c'est leur dat
 méthode) : `new` / `add` créent ces dossiers **vides** à partir des **noms** lus dans
 `methode/PM2/fr/` (source unique des noms de phases). L'outillage de la méthode reste dans le
 bundle — c'est pour ça que le projet sync chez un tiers reste lisible.
+
+### 6.4 Gestion de l'impact humain (transverse) + slot « avec licence »
+
+- **GestionImpactHumain** (marque blanche, **CC BY-SA 4.0**) : 7 documents `GIH-01…07` — le
+  **côté humain** d'un changement (qui est touché, communication, adoption/formation,
+  résistances, sponsors/champions, bénéfices/consolidation). **Transverse** : utilisable avec
+  n'importe quelle méthode, dans n'importe quelle phase (WP-0051). Contenu en connaissance
+  générale — **aucun modèle propriétaire nommé**.
+- **Slot « avec licence »** (`methode/prosci/`) : les méthodes sous licence (ex. Prosci ©)
+  n'entrent **pas** dans le repo public — le slot ne contient qu'une **notice** (README) et un
+  `.gitignore` qui empêche tout push. Tu y mets **tes propres templates** (tes notes, usage
+  local) : les skills se génèrent alors **automatiquement**, comme pour toute méthode
+  (WP-0040/0050).
