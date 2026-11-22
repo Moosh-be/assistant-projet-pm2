@@ -31,6 +31,29 @@ les éléments utiles pour le comprendre, les notes de travail...
 
 Cette convention volontairement légère constitue le socle du projet.
 
+## Sommaire
+
+- [Pourquoi faire ça ?](#pourquoi-faire-ça-)
+- [Quatre principes structurants](#quatre-principes-structurants)
+  - [🛟 Résilient : les données survivent à l'outillage](#-résilient--les-données-survivent-à-loutillage)
+  - [🔐 Souverain : tes objets sont dans l'espace de fichiers que tu choisis](#-souverain--tes-objets-sont-dans-lespace-de-fichiers-que-tu-choisis)
+  - [🌍 Universel : les méthodes enrichissent le modèle, elles ne l'enferment pas](#-universel--les-méthodes-enrichissent-le-modèle-elles-ne-lenferment-pas)
+  - [🔌 Interopérable : Markdown comme format pivot](#-interopérable--markdown-comme-format-pivot)
+- [Et l'assistant dans tout ça ?](#et-lassistant-dans-tout-ça-)
+- [État actuel : PM² est le premier cas d'usage complet](#état-actuel--pm-est-le-premier-cas-dusage-complet)
+- [Démarrage rapide](#démarrage-rapide)
+- [Le principe du « projet mince »](#le-principe-du--projet-mince-)
+- [Le bundle](#le-bundle)
+- [Inception : le projet s'utilise lui-même](#inception--le-projet-sutilise-lui-même)
+- [Les 3 niveaux de fonctionnement : dégradation résiliente](#les-3-niveaux-de-fonctionnement--dégradation-résiliente)
+- [Dans le mode IA : agent, command, skill](#dans-le-mode-ia--agent-command-skill)
+- [Les 3 modes d'alimentation](#les-3-modes-dalimentation)
+- [Gouvernance PM² actuellement implémentée](#gouvernance-pm-actuellement-implémentée)
+- [Connexions](#connexions)
+- [Forks](#forks)
+- [Contribution](#contribution)
+- [Licence](#licence)
+
 ## Pourquoi faire ça ?
 
 Parce que nos activités finissent rapidement dispersées entre des outils qui possèdent chacun leur représentation du travail :
@@ -357,6 +380,8 @@ La dégradation fonctionne ainsi :
 
 Et le `bootstrap` permet ensuite de remonter l'échelle en rétablissant la connexion avec le bundle.
 
+> **Tes projets dans des fichiers texte, édités même avec `nano`, et tout fonctionne** — parce que le pire est une *version* du kit, pas un accident, et que le confort (ton interface, ton IA, ton harness, chacun le sien) ne se copie pas, il s'adapte : [du résilient rudimentaire au confort →](docs/du-resilient-rudimentaire-au-confort.md)
+
 ---
 
 ## Dans le mode IA : agent, command, skill
@@ -599,10 +624,4 @@ L'assistant se pilote à **3 niveaux**, **chacun fonctionnel seul** — on perd 
 
 ## Forks
 - **Ce repo = l'original PUBLIC** (contribution PM² générique, pas de données entreprise).
-- **Fork RTBF (privé, GitLab)** : adapte chaque template aux templates Word RTBF v3.0.1 (traduits FR) + rôles/processus RTBF.
-
-## Contribution
-PM²-friendly : garde les templates **génériques** (pas de données entreprise dans le repo public). Langue : les templates sont en **français** (la langue de contribution ici) — des variantes en anglais sont les bienvenues.
-
-## Licence
-CC BY-SA 4.0 (contenu) · MIT (`tools/`).
+- **Fork RTBF (privé, GitLab)** : adapte chaque template aux templates Word RTBF v3.0
