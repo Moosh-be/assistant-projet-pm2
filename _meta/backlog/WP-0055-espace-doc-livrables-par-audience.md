@@ -39,75 +39,73 @@ sépare **par audience** — la redondance entre docs est acceptée, car **l'IA 
 
 ## Périmètre
 
-- `methode/Doc/fr/referentiel-doc.md` — catalogue 5 colonnes, codes `DOC-01.P` … `DOC-11.P`,
-  Phase « Transverse », Gate « — ».
+- `methode/Doc/fr/referentiel-doc.md` — catalogue 5 colonnes, codes `DOC-<ABR5>.P`
+  (abrégés 5 lettres, sans numéro), Phase « Transverse », Gate « — ».
 - `methode/Doc/fr/01 Livrables/` — **1 template par type (11)**, légers (squelettes type GIH) :
   frontmatter (+ `audience:`) · `## 1. Contenu` (sections + `[À remplir]`) ·
   `## 2. Questions de l'assistant` (bullets `- [ ]`) · `## 3. Statut de remplissage`.
-- **Les 11 types** (ordre du verbatim) :
-  1. DOC-01.P — Doc technique
-  2. DOC-02.P — Mode d'emploi
-  3. DOC-03.P — Installation & maintenance
-  4. DOC-04.P — Doc pour un rôle R (**1 template GÉNÉRIQUE paramétré par rôle**, pas 10 copies)
-  5. DOC-05.P — Doc des docs (**pièce maîtresse** : le méta — catalogue du jeu de docs par
-     audience + règles de séparation + politique de redondance)
-  6. DOC-06.P — Prise en main
-  7. DOC-07.P — Spécialisations
-  8. DOC-08.P — Compétences utiles à l'utilisation
-  9. DOC-09.P — Philosophie & valeurs
-  10. DOC-10.P — Intégration
-  11. DOC-11.P — Comparaison avec la concurrence
+- **Les 11 types** — **codes = abrégés 5 lettres, sans numéro** (décision 22/11 : « il n'y
+  a pas d'ordre pour la doc ») ; **DOC-DOCHS = la home** (point d'entrée, en tête) :
+  - DOC-DOCHS.P — Doc des docs (**la home** : catalogue du jeu de docs par audience +
+    règles de séparation + politique de redondance)
+  - DOC-TECHN.P — Doc technique · DOC-EMPLO.P — Mode d'emploi · DOC-INSTA.P — Installation
+    & maintenance · DOC-ROLES.P — Doc pour un rôle R (**générique, paramétrée**) ·
+    DOC-PRISE.P — Prise en main · DOC-SPECI.P — Spécialisations · DOC-COMPS.P — Compétences
+    utiles · DOC-PHILO.P — Philosophie & valeurs · DOC-INTEG.P — Intégration ·
+    DOC-COMPA.P — Comparaison avec la concurrence
 - **Skills** : mécanique WP-0050 (1 document = 1 skill, zéro code) → **11 skills**
-  `ap-doc-01-doc-technique` … `ap-doc-11-comparaison-concurrence`, générées par
-  `tools/gen_skills.py` (lancé en fin de passe par l'orchestrateur — **pas dans cette tâche**).
+  `ap-doc-technique`, `ap-doc-mode-demploi`, … `ap-doc-comparaison-concurrence` (pas de
+  numéro dans l'id — codes en lettres), générées par `tools/gen_skills.py`.
 
 ## Critères de réalisation
 
 - [x] Ce WP créé (statut `en-cours`).
 - [x] `methode/Doc/fr/referentiel-doc.md` — catalogue 5 colonnes conforme à la mécanique
-      de `tools/gen_skills.py` (codes `DOC-NN.P`, fichiers réels, 1 correspondance exacte
-      par glob).
+      de `tools/gen_skills.py` (codes `DOC-<ABR5>.P`, fichiers réels, 1 correspondance
+      exacte par glob).
 - [x] 11 templates dans `methode/Doc/fr/01 Livrables/` (frontmatter + `audience:` +
       section 2 en bullets `- [ ]`).
-- [ ] 11 skills `ap-doc-01…11` générées par `tools/gen_skills.py` — **fin de passe**
-      (l'orchestrateur lance le générateur ; ne pas le lancer dans cette tâche).
+- [x] 11 skills `ap-doc-<slug>` générées par `tools/gen_skills.py` (22/11 — le générateur
+      a été **généralisé** : codes en lettres au lieu de numéros ; les 29 skills
+      PM²/GIH inchangées par hash, 40 au total).
 - [ ] `docs/guide.md` (chapitre méthodes) : l'espace Doc documenté — **hors tâche**
       (à reprendre dans la passe de mise à jour du guide).
 
-## Décisions / propositions assistant
+## Décisions (22/11 — utilisateur)
 
-1. **Numérotation** : l'ordre du verbatim est conservé (DOC-01 = doc technique …
-   DOC-11 = comparaison concurrence) ; la « doc des docs » (DOC-05) reste la **pièce
-   maîtresse** sans prendre le numéro 01. `[À confirmer]`.
-2. **Audiences** des 11 types (proposées, reprises dans les frontmatters) :
+1. **Numérotation → abrégés 5 caractères, sans numéro** : « je trouve qu'il n'y a pas
+   d'ordre pour la doc, donc une abréviation en 5 caractères serait mieux » — exception :
+   la **doc des docs = la home** (point d'entrée, listée en tête du catalogue). Codes
+   appliqués : DOCHS · TECHN · EMPLO · INSTA · ROLES · PRISE · SPECI · COMPS · PHILO ·
+   INTEG · COMPA.
+2. **Audiences validées** (« ok, c'est bien pour valider le skill ») — les 11 squelettes
+   **ouverts dans Notepad++** par l'utilisateur (22/11) pour valider les skills.
+3. **Où vivent les docs du produit** : « vu que c'est dans git, il faut distinguer ce qui
+   est sur le **git du produit** 'assistant' quand je l'utilise, et sur le git du
+   **projet** (quand je le développe) » → les docs du produit vivent dans le **repo du
+   produit** ; le projet de développement les référence et les suit comme **livrables**
+   (remplace la proposition `03 Exécution/`).
+4. **Méthode de création** : les docs du produit assistant seront créées **avec les
+   skills DOC** (« je voulais le faire avec le skill doc à préparer… utiliser le skill
+   pour le tester et créer ces rep. ») ; le skill constatera que certains docs existent
+   déjà → **zéro écrasement** (« ça renforce la résilience au mélange d'action
+   spontanée et d'action assistées de l'utilisateur ») → **WP-0056**.
+5. « un peu vite mais c'est pas grave **on garde** » — les 11 templates créés sont gardés.
 
-   | Code | Audience proposée |
-   |---|---|
-   | DOC-01.P | développeurs / mainteneurs du produit |
-   | DOC-02.P | utilisateurs du produit (usage courant) |
-   | DOC-03.P | administrateurs / équipes d'exploitation |
-   | DOC-04.P | un rôle R du produit (paramétrable par copie) |
-   | DOC-05.P | auteurs de la doc + toute personne qui cherche une doc |
-   | DOC-06.P | nouveaux utilisateurs (premiers jours) |
-   | DOC-07.P | utilisateurs avancés / spécialistes |
-   | DOC-08.P | futurs utilisateurs (prérequis) + formateurs |
-   | DOC-09.P | tous les publics (contributeurs, utilisateurs, décideurs) |
-   | DOC-10.P | intégrateurs / auteurs d'outils connexes |
-   | DOC-11.P | décideurs / utilisateurs en cours de choix d'outil |
+**Impact générateur** (22/11) : `tools/gen_skills.py` **généralisé** — le code du
+catalogue accepte des abrégés en lettres (`[A-Za-z0-9]+-[A-Za-z0-9]+\.[A-Z]+`) ; l'id de
+la skill n'a de numéro (`-NN-`) que si le code en porte un (les 29 skills PM²/GIH
+inchangées par hash — 40 au total).
 
-   `[À confirmer]`.
-3. **Dossier projet** : la doc du produit = livrable → elle vit dans le dossier livrables
-   du projet (PM² : `03 Exécution/`) ; quand le produit est le repo lui-même (ex. ce kit),
-   la doc vit à la racine du repo du produit. `[À confirmer]`.
+## Suite
 
-## Suite signalée
-
-- **Appliquer cet espace au produit assistant lui-même** : restructurer **README / guide /
-  prise-en-main par audience** avec ces templates (le verbatim : « on va le créer et
-  l'utiliser pour ce produit assistant ») — **WP ultérieur**, `[À confirmer]`.
+- **WP-0056** (tracé 22/11) : **créer les docs du produit assistant avec les skills DOC**
+  (test des skills en conditions réelles + production du jeu de docs par audience).
+- `docs/guide.md` (chapitre méthodes) : l'espace Doc documenté — rattrapage (à reprendre
+  dans la passe de mise à jour du guide).
 
 ## Note
 
 Les 11 templates sont des **squelettes** (structure des sections + bonnes questions) —
 leur statut propre reste `en cours` ; le remplissage mode B se fait **par produit** :
-chaque produit a son jeu de docs, catalogué dans sa DOC-05.
+chaque produit a son jeu de docs, catalogué dans sa **DOC-DOCHS** (la home).

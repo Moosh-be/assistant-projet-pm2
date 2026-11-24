@@ -8,6 +8,8 @@ le premier cas d'usage, le générateur est **agnostique de la méthode** : il d
 document du **référentiel** de la méthode (catalogue : | Code | Artefact | Phase | Gate | Fichier |).
 
 Sortie : .opencode/skills/ap-<methode>[-<lang>]-<NN>-<slug>/SKILL.md  (dans le bundle)
+      — si le code du référentiel porte un abrégé en lettres au lieu d'un numéro
+      (ex. l'espace `Doc` : `DOC-TECHN.P`), pas de <NN> : ap-<methode>-<slug>.
 
 Sources de vérité :
   - le catalogue   : methode/<M>/<lang>/referentiel*.md
@@ -70,7 +72,7 @@ def parse_catalog(ref_path):
     """Lignes du catalogue : | Code | Artefact | Phase | Gate | Fichier |"""
     rows = []
     for line in ref_path.read_text(encoding="utf-8").splitlines():
-        m = re.match(r"^\|\s*([A-Za-z0-9]+-\d+\.[A-Z]+)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|", line)
+        m = re.match(r"^\|\s*([A-Za-z0-9]+-[A-Za-z0-9]+\.[A-Z]+)\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|", line)
         if not m:
             continue
         code, nom, phase, gate, fichier = (g.strip() for g in m.groups())
@@ -135,9 +137,10 @@ def gate_lines(r):
 
 def build_skill(r, tpl_path, mdir, fm, questions, by_phase, e):
     code = r["code"]
-    num = re.search(r"(\d+)$", code.split(".")[0]).group(1)   # PM2-01.I → 01
-    slug = re.sub(r"^[A-Za-z0-9]+-\d+\.[A-Z]+-", "", tpl_path.stem)
-    sid = f"ap-{e['methode']}{e['lang_suffix']}-{num}-{slug}"
+    num = re.search(r"(\d+)$", code.split(".")[0])            # PM2-01.I → 01 ; None si abrégé en lettres
+    num = num.group(1) if num else None
+    slug = re.sub(r"^[A-Za-z0-9]+-[A-Za-z0-9]+\.[A-Z]+-", "", tpl_path.stem)
+    sid = f"ap-{e['methode']}{e['lang_suffix']}" + (f"-{num}" if num else "") + f"-{slug}"
     phase_disp = fm.get("phase", r["phase"])
     gate = r["gate"].replace("→", "").strip()
     gate_desc = "sans gate direct" if gate == "—" else f"gate {gate}"

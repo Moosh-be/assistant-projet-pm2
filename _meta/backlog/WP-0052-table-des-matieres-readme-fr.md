@@ -32,9 +32,10 @@ Obsidian `[[...]]` (compatibles GitHub + lecture Obsidian + VS Code) ; **inserti
   vraiment : 4 blocs autonomes). Autres h3 de la partie (Versionnage, Actuellement
   implémentées, Connexions envisagées, En une phrase) : non indexés (sous-sections mineures
   / phrase de clôture).
-- **Hors périmètre** : les miroirs `README.md` / `README.en.md` — **décision à venir par
-  l'utilisateur** (le FR sert de pilote ; on attend la forme retenue avant de dupliquer la
-  mécanique dans les miroirs).
+- **Miroirs — décision (22/11, utilisateur)** : `README.md` = **juste la présentation des
+  différentes versions** (switcher 🇫🇷/🇬🇧) — **le texte actuel est très bien, tel quel**
+  (pas de Sommaire ni d'accroche à y ajouter). `README.en.md` : **rien pour l'instant**
+  (pas de Sommaire/accroche tant que le texte EN n'existe pas).
 
 ## Critères de réalisation
 
@@ -54,15 +55,15 @@ Obsidian `[[...]]` (compatibles GitHub + lecture Obsidian + VS Code) ; **inserti
 
 ## Notes
 
-- **⚠️ Point d'attention (décision utilisateur à venir)** : `README.fr.md` contient
+- **⚠️ Point d'attention — PARKING (22/11, utilisateur)** : `README.fr.md` contient
   **deux README** — le nouveau (en tête, h1 « (nom provisoire) ») et l'ancien (après la rule
   `-----…`, avec son propre h1 + le switch 🇫🇷/🇬🇧). **5 h2 en double** entre les deux parties
   (Démarrage rapide · Les 3 modes d'alimentation · Forks · Contribution · Licence) → GitHub
-  les désambiguise en `-1` dans la partie basse (ex. `#démarrage-rapide-1`). Le Sommaire
-  indexe **uniquement la partie supérieure** (celle relue et saluée par l'utilisateur) —
-  choix robuste si la partie basse finit retirée. Si la partie basse doit rester : 2ᵉ
-  Sommaire ou entrées désambiguïsées `-1`, et probablement une **fusion des deux README en
-  un** (→ WP dédié).
+  les désambiguise en `-1` dans la partie basse (ex. `#démarrage-rapide-1`).
+  **Décision utilisateur (verbatim) : « probablement fusionner élaguer mais parking »** →
+  la fusion/élagage est **mise en attente** : aucune action pour l'instant ; le Sommaire
+  indexe la partie supérieure uniquement (choix robuste dans les deux cas). À relancer par
+  un WP dédié quand on le souhaite.
 - Les ancres « atypiques » (tirets doubles / final, tiret en tête des 4 h3 🛟/🔐/🌍/🔌) sont
   le **rendu GitHub réel** du fichier — ce sont les `id` effectifs, pas une approximation.
   Compatibilité lecture Obsidian / preview VS Code sur ces cas = au mieux-effort (leurs
